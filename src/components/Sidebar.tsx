@@ -129,7 +129,7 @@ export default function Sidebar({ projectId }: SidebarProps) {
             <Link
               href={item.href}
               className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-                pathname === item.href
+                pathname === item.href || (item.href !== `/canvas/${projectId}` && pathname.startsWith(item.href))
                   ? item.isHome
                     ? 'bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white shadow-md'
                     : 'bg-[#FFBB3F]/10 text-[#FFBB3F] border border-[#FFBB3F]/20'
