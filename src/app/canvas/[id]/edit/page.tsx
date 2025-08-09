@@ -345,14 +345,14 @@ export default function CanvasEditPage() {
               />
             </div>
 
-            {/* 完了ボタン */}
-            <div className="flex justify-center">
+            {/* 保存ボタン */}
+            <div className="flex justify-center mt-8">
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-8 py-3 rounded-full text-lg font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                {isSubmitting ? '更新中...' : '完了'}
+                {isSubmitting ? '更新中...' : '保存'}
               </button>
             </div>
           </div>
@@ -363,10 +363,18 @@ export default function CanvasEditPage() {
       {showConfirmModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
           <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">確認</h2>
-            <p className="text-gray-700 mb-8 text-center">
-              今のリーンキャンバスに本当に変更を加えてもいいですか？
-            </p>
+            <div className="text-center mb-6">
+              <div className="bg-[#FFBB3F] text-white p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">保存を確認します</h2>
+              <p className="text-gray-700">
+                リーンキャンバスの変更を保存します。<br />
+                この操作を実行してもよろしいですか？
+              </p>
+            </div>
             
             <div className="flex space-x-4">
               <button
@@ -379,7 +387,7 @@ export default function CanvasEditPage() {
                 onClick={handleConfirm}
                 className="flex-1 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
               >
-                OK
+                保存する
               </button>
             </div>
           </div>

@@ -21,20 +21,14 @@ interface LeanCanvas {
   idea_name: string
 }
 
-interface Question {
-  id: number
-  question: string
-  answer: string
-}
-
-interface AnalysisResult {
+interface ResearchResult {
   field: keyof LeanCanvas
   before: string
   after: string
   reason: string
 }
 
-export default function ReflectionPage() {
+export default function ResearchResultPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
@@ -43,8 +37,8 @@ export default function ReflectionPage() {
   const [loading, setLoading] = useState(true)
   const [originalCanvas, setOriginalCanvas] = useState<LeanCanvas | null>(null)
   const [updatedCanvas, setUpdatedCanvas] = useState<LeanCanvas | null>(null)
-  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [researchResults, setResearchResults] = useState<ResearchResult[]>([])
+  const [gptResults, setGptResults] = useState<string>('')
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -81,12 +75,12 @@ export default function ReflectionPage() {
     idea_name: "精密農業向けスマート農業センシング&管理プラットフォーム"
   }
 
-  const dummyAnalysisResults: AnalysisResult[] = [
+  const dummyResearchResults: ResearchResult[] = [
     {
       field: 'problem',
       before: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題",
       after: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題\n• 若手農家の技術習得時間の長期化",
-      reason: "ユーザーの回答から、若手農家の技術習得に関する課題が追加されました。これにより、ターゲット層の課題がより具体的になりました。"
+      reason: "リサーチ結果から、若手農家の技術習得に関する課題が追加されました。これにより、ターゲット層の課題がより具体的になりました。"
     },
     {
       field: 'customer_segments',
@@ -102,33 +96,52 @@ export default function ReflectionPage() {
     }
   ]
 
-  const dummyQuestions: Question[] = [
-    {
-      id: 1,
-      question: "あなたの解決策は、顧客課題のどの部分を最も効果的に解決しますか？具体的な因果関係を説明してください。",
-      answer: "解決策は、高齢化と人手不足による収益性の低下という核心的な課題を、自動化とデータ駆動の意思決定支援により解決します。具体的には、経験に依存していた農業技術をデジタル化し、若手農家でもベテラン農家と同等の判断ができるようになります。"
-    },
-    {
-      id: 2,
-      question: "顧客セグメントとアーリーアダプターの定義に矛盾はありませんか？より具体的なターゲット像を描けますか？",
-      answer: "顧客セグメントは「中小規模の農業従事者」と定義していますが、アーリーアダプターとして「日本国内の米・野菜農家」を挙げています。より具体的には、「デジタル化に前向きな40-60代の中小規模農家（耕作面積5-20ha）」と定義することで、ターゲットを明確化できます。"
-    },
-    {
-      id: 3,
-      question: "独自の価値提案と圧倒的優位性の関係性は明確ですか？競合他社との差別化要因は十分ですか？",
-      answer: "独自の価値提案は「使いやすいスマート農業ソリューション」ですが、圧倒的優位性として「独自の超小型・低消費電力センサー技術」を挙げています。この技術的優位性が価値提案の「使いやすさ」と「手頃な価格」を支える具体的な仕組みをより明確に説明する必要があります。"
-    },
-    {
-      id: 4,
-      question: "収益の流れと費用構造のバランスは取れていますか？持続可能なビジネスモデルになっていますか？",
-      answer: "収益の流れは「センサーデバイス販売」と「SaaS利用料」の2本柱ですが、初期導入コストが高く、農家の投資判断を阻害する可能性があります。段階的な導入プランやリースオプションの検討が必要です。また、SaaS継続率を高めるための価値提供の具体化も重要です。"
-    },
-    {
-      id: 5,
-      question: "主要指標は、ビジネスの成功を適切に測定できていますか？改善すべき指標はありますか？",
-      answer: "主要指標として「センサー導入台数」「SaaS継続率」「アプリ利用率」を設定していますが、これらは投入指標とプロセス指標に偏っています。成果指標として「農作物の収穫量向上率」「農作業時間短縮率」「農家の収益性向上率」を追加することで、ビジネスインパクトをより適切に測定できます。"
-    }
-  ]
+  const dummyGptResults = `リサーチ実施結果
+
+【市場調査結果】
+1. スマート農業市場の成長性
+- 2023年の国内市場規模：約1,200億円
+- 年平均成長率：15.2%
+- 主要成長要因：人手不足、高齢化、食料安全保障
+
+2. 競合分析
+- 大手企業：ヤンマー、クボタ、井関農機
+- スタートアップ：アグリノート、ファームノート
+- 価格帯：50万円〜200万円（高価格帯が主流）
+
+3. 顧客ニーズ調査
+- 最も重要な課題：初期投資コスト（78%）
+- 次に重要な課題：操作の簡単さ（65%）
+- 期待する効果：収穫量向上（82%）、作業時間短縮（76%）
+
+【技術調査結果】
+1. センサー技術の現状
+- 土壌センサー：pH、水分、温度測定が可能
+- 気象センサー：温度、湿度、風速、降雨量測定
+- 画像センサー：作物の生育状況、病害検出
+
+2. 通信技術
+- LoRaWAN：低消費電力、長距離通信
+- 5G：高速通信、リアルタイム性
+- 衛星通信：広域カバー
+
+【規制・制度調査】
+1. 農業支援制度
+- スマート農業加速化実証事業
+- 農業競争力強化支援法
+- 農地法改正
+
+2. データ規制
+- 個人情報保護法
+- 農業データ連携基盤（WAGRI）
+- 農業データ標準化
+
+【推奨事項】
+1. 段階的導入プランの提供
+2. リースオプションの検討
+3. 地域農協との連携強化
+4. データセキュリティの強化
+5. ユーザビリティの向上`
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -141,20 +154,11 @@ export default function ReflectionPage() {
           const userData = await response.json()
           setUser(userData)
           
-          // ローカルストレージから回答データを取得
-          const savedAnswers = localStorage.getItem(`wall-hitting-answers-${projectId}`)
-          if (savedAnswers) {
-            const parsedAnswers = JSON.parse(savedAnswers)
-            setQuestions(parsedAnswers)
-          } else {
-            // 保存された回答がない場合はダミーデータを使用
-            setQuestions(dummyQuestions)
-          }
-          
           // バックエンド未接続時はダミーデータを使用
           setOriginalCanvas(dummyOriginalCanvas)
           setUpdatedCanvas(dummyUpdatedCanvas)
-          setAnalysisResults(dummyAnalysisResults)
+          setResearchResults(dummyResearchResults)
+          setGptResults(dummyGptResults)
         } else {
           window.location.href = '/login'
         }
@@ -162,8 +166,8 @@ export default function ReflectionPage() {
         // エラー時もダミーデータを使用
         setOriginalCanvas(dummyOriginalCanvas)
         setUpdatedCanvas(dummyUpdatedCanvas)
-        setAnalysisResults(dummyAnalysisResults)
-        setQuestions(dummyQuestions)
+        setResearchResults(dummyResearchResults)
+        setGptResults(dummyGptResults)
       } finally {
         setLoading(false)
       }
@@ -221,6 +225,10 @@ export default function ReflectionPage() {
     setShowConfirmModal(false)
   }
 
+  const handleGoBack = () => {
+    router.push(`/canvas/${projectId}/research-exec`)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -255,27 +263,46 @@ export default function ReflectionPage() {
           <div className="max-w-6xl mx-auto">
             {/* ヘッダー部分 */}
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">論理チェック - リーンキャンバスへの反映</h1>
-              <p className="text-gray-600">AIの分析結果をリーンキャンバスに反映します</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">リサーチ実施 - 結果</h1>
+              <p className="text-gray-600">リサーチ結果をリーンキャンバスに反映します</p>
             </div>
 
-            {/* AI分析結果セクション */}
+            {/* GPTリサーチ結果セクション */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
                 <div className="bg-[#FFBB3F] text-white p-3 rounded-full mr-4">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">AI分析結果</h2>
-                  <p className="text-gray-600">あなたの回答を基に、リーンキャンバスの改善点を分析しました</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">AIリサーチ結果</h2>
+                  <p className="text-gray-600">AIが実施したリサーチの詳細結果</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-6">
+                <pre className="text-sm text-gray-700 whitespace-pre-line font-sans">{gptResults}</pre>
+              </div>
+            </div>
+
+            {/* 差分表示セクション */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
+              <div className="flex items-center mb-6">
+                <div className="bg-green-500 text-white p-3 rounded-full mr-4">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">リーンキャンバス更新内容</h2>
+                  <p className="text-gray-600">リサーチ結果に基づく変更点</p>
                 </div>
               </div>
 
               {/* 差分表示 */}
               <div className="space-y-6">
-                {analysisResults.map((result, index) => (
+                {researchResults.map((result, index) => (
                   <div key={index} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center mb-3">
                       <div className="bg-[#FFBB3F] text-white px-2 py-1 rounded text-xs font-bold mr-3">
@@ -291,7 +318,7 @@ export default function ReflectionPage() {
                         {result.field === 'revenue_streams' && '収益の流れ'}
                         {result.field === 'idea_name' && 'アイデア名'}
                       </div>
-                      <span className="text-sm text-gray-600">改善提案</span>
+                      <span className="text-sm text-gray-600">更新提案</span>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
@@ -310,7 +337,7 @@ export default function ReflectionPage() {
                     </div>
                     
                     <div className="bg-blue-50 p-3 rounded">
-                      <h4 className="text-sm font-medium text-blue-800 mb-1">改善理由</h4>
+                      <h4 className="text-sm font-medium text-blue-800 mb-1">更新理由</h4>
                       <p className="text-sm text-blue-700">{result.reason}</p>
                     </div>
                   </div>
@@ -321,9 +348,9 @@ export default function ReflectionPage() {
             {/* 更新後のリーンキャンバス編集 */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
-                <div className="bg-green-500 text-white p-3 rounded-full mr-4">
+                <div className="bg-blue-500 text-white p-3 rounded-full mr-4">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </div>
                 <div>
@@ -348,14 +375,14 @@ export default function ReflectionPage() {
                 </div>
               </div>
 
-                             {/* メインキャンバス編集 */}
-               <div className="grid grid-cols-10 gap-2 auto-rows-min">
+              {/* メインキャンバス編集 */}
+              <div className="grid grid-cols-10 gap-2 auto-rows-min">
                 {/* 1行目 */}
                 <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     顧客課題
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.problem}
                     onChange={(e) => handleCanvasChange('problem', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -368,7 +395,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     解決策
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.solution}
                     onChange={(e) => handleCanvasChange('solution', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -381,7 +408,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     独自の価値
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.unique_value_proposition}
                     onChange={(e) => handleCanvasChange('unique_value_proposition', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -394,7 +421,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     圧倒的優位性
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.unfair_advantage}
                     onChange={(e) => handleCanvasChange('unfair_advantage', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -407,7 +434,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     顧客セグメント
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.customer_segments}
                     onChange={(e) => handleCanvasChange('customer_segments', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -422,7 +449,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     代替品
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.existing_alternatives}
                     onChange={(e) => handleCanvasChange('existing_alternatives', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -435,7 +462,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     主要指標
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.key_metrics}
                     onChange={(e) => handleCanvasChange('key_metrics', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -448,7 +475,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     販路
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.channels}
                     onChange={(e) => handleCanvasChange('channels', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -461,7 +488,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     アーリーアダプター
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.early_adopters}
                     onChange={(e) => handleCanvasChange('early_adopters', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -476,7 +503,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     費用構造
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.cost_structure}
                     onChange={(e) => handleCanvasChange('cost_structure', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -489,7 +516,7 @@ export default function ReflectionPage() {
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     収益の流れ
                   </div>
-                                                       <textarea
+                  <textarea
                     value={updatedCanvas.revenue_streams}
                     onChange={(e) => handleCanvasChange('revenue_streams', e.target.value)}
                     onInput={autoResizeTextarea}
@@ -511,46 +538,11 @@ export default function ReflectionPage() {
                 {isUpdating ? '更新中...' : 'キャンバスを更新'}
               </button>
               <button
-                onClick={handleCancel}
+                onClick={handleGoBack}
                 className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
               >
                 修正を反映しないで戻る
               </button>
-            </div>
-
-            {/* 参考：ユーザーの回答 */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <div className="flex items-center mb-4">
-                <div className="bg-gray-400 text-white p-2 rounded-full mr-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-1">参考：あなたの回答</h3>
-                  <p className="text-gray-500 text-sm">以下の回答を基にAIが分析を行いました</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {questions.map((question, index) => (
-                  <div key={question.id} className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-start mb-3">
-                      <div className="bg-gray-400 text-white px-2 py-1 rounded text-xs font-bold mr-3 flex-shrink-0">
-                        Q{index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">
-                          {question.question}
-                        </h4>
-                        <div className="bg-gray-50 p-3 rounded text-sm text-gray-700 whitespace-pre-line">
-                          {question.answer}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -568,14 +560,14 @@ export default function ReflectionPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">キャンバスを更新します</h2>
               <p className="text-gray-700">
-                論理チェック結果を反映したリーンキャンバスを更新します。<br />
+                リサーチ結果を反映したリーンキャンバスを更新します。<br />
                 この操作を実行してもよろしいですか？
               </p>
             </div>
             
             <div className="flex space-x-4">
               <button
-                onClick={handleCancel}
+                onClick={() => setShowConfirmModal(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
               >
                 キャンセル
