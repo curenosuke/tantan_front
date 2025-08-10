@@ -253,10 +253,10 @@ export default function HistoryPage() {
                         </div>
 
                         {/* このバージョンを参照ボタン */}
-                        <div className="mt-3">
+                        <div className="mt-3 flex justify-end">
                           <button
                             onClick={() => handleViewVersion(version.version)}
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FFBB3F] transition-colors"
+                            className="inline-flex items-center bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md"
                           >
                             <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -317,10 +317,10 @@ export default function HistoryPage() {
                     </div>
 
                     {/* このバージョンを参照ボタン */}
-                    <div className="mt-3">
+                    <div className="mt-3 flex justify-end">
                       <button
                         onClick={() => handleViewVersion('version1')}
-                        className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FFBB3F] transition-colors"
+                        className="inline-flex items-center bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md"
                       >
                         <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

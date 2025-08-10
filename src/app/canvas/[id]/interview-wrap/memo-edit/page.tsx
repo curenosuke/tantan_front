@@ -242,19 +242,23 @@ export default function InterviewMemoEditPage() {
                   />
                 </div>
 
-                {/* もとにしたバージョン */}
+                {/* もとにしたバージョン（メモ用） */}
                 <div>
                   <label htmlFor="canvas-version" className="block text-sm font-medium text-gray-700 mb-2">
-                    もとにしたバージョン
+                    もとにしたバージョン（メモ用）
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="canvas-version"
                     value={memoData.canvas_version}
                     onChange={(e) => handleInputChange('canvas_version', e.target.value)}
-                    placeholder="例：version3"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors"
-                  />
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors bg-white"
+                  >
+                    <option value="">バージョン指定なし</option>
+                    <option value="version1">version1</option>
+                    <option value="version2">version2</option>
+                    <option value="version3">version3</option>
+                    <option value="version4">version4</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -264,21 +268,21 @@ export default function InterviewMemoEditPage() {
               <button
                 onClick={handleCancel}
                 disabled={saving}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full text-base font-medium transition-all duration-300 transform hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 保存せずに戻る
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full text-base font-medium transition-all duration-300 transform hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {saving ? '保存中...' : '保存'}
               </button>
               <button
                 onClick={handleSaveAndReflect}
                 disabled={saving}
-                className="px-4 py-2 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-md text-sm font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-full text-base font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {saving ? '保存中...' : '保存してキャンバスに反映'}
               </button>

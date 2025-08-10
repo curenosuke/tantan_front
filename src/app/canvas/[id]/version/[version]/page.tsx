@@ -267,7 +267,7 @@ export default function VersionPage() {
             <div className="flex items-center justify-center space-x-4">
               <button
                 onClick={handleOverwrite}
-                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
+                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-107 hover:shadow-lg shadow-md"
               >
                 このバージョンを最新バージョンとして上書き
               </button>
