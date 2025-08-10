@@ -170,9 +170,9 @@ export default function ManualCanvasPage() {
   }
 
   const handleComplete = async () => {
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    alert('リーンキャンバスが保存されました（デザイン確認用）')
+    // 入力されたデータをlocalStorageに保存
+    localStorage.setItem('leanCanvasData', JSON.stringify(canvasData))
+    
     // first-checkページに移動
     window.location.href = '/canvas/first-check'
   }

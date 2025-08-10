@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
+import fetchItem from '@/api/fetchItem'
 
 interface LeanCanvas {
   problem: string
@@ -23,22 +24,56 @@ export default function FirstCheckPage() {
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // ダミーデータ
-  const ideaName = "精密農業向けスマート農業センシング&管理プラットフォーム"
-  const canvasData: LeanCanvas = {
-    problem: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題",
-    existing_alternatives: "• ベテラン農家の長年の経験と勘（人依存、再現性なし、若手・新規農家が活用困難）\n• 安価なアナログ・デジタル機器による手動記録・管理（データ断片化、記録・分析が煩雑、リアルタイム性が低い）",
-    solution: "• 土壌・気象・植物画像をリアルタイム測定する小型センシングデバイス\n• 作物生育・水管理・病害予測を可視化するスマートフォンアプリ\n• クラウドでの自動データ蓄積とAI農業アドバイス\n• 低コスト・低消費電力設計、太陽光発電対応",
-    key_metrics: "• センサー導入台数\n• SaaS継続率（月間解約率）\n• アプリ利用率（日次・週次アクティブユーザー）",
-    unique_value_proposition: "「使いやすい」スマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
-    high_level_concept: "「使いやすい」スマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
-    unfair_advantage: "• 独自の超小型・低消費電力センサー技術（例：MEMS、画像センサー）\n• プリンターヘッド技術を活用した農業散布機器との統合可能性\n• 国内製造による品質・信頼性、全国販売網構築可能性\n• スマートグラス・AR技術との将来統合（例：独自MOVARIOスマートグラス）",
-    channels: "• 地域農協（JA）との協業販売\n• 全国農業機械販売ルート",
-    customer_segments: "中小規模の農業従事者",
-    early_adopters: "日本国内の米・野菜農家",
-    cost_structure: "• センサー・ハードウェア開発・量産コスト\n• スマートフォンアプリ・クラウドプラットフォーム開発・運用\n• 顧客サポート・チャネル開発（営業・代理店）",
-    revenue_streams: "• センサーデバイス販売（初期導入コスト）\n• 月額または年額SaaSダッシュボード利用料"
+  // データを取得する関数
+  const getCanvasData = (): { ideaName: string; canvasData: LeanCanvas } => {
+    try {
+      const savedData = localStorage.getItem('leanCanvasData')
+      if (savedData) {
+        const parsedData = JSON.parse(savedData)
+        return {
+          ideaName: parsedData.idea_name || "未入力",
+          canvasData: {
+            problem: parsedData.problem || "",
+            existing_alternatives: parsedData.existing_alternatives || "",
+            solution: parsedData.solution || "",
+            key_metrics: parsedData.key_metrics || "",
+            unique_value_proposition: parsedData.unique_value_proposition || "",
+            high_level_concept: parsedData.high_level_concept || "",
+            unfair_advantage: parsedData.unfair_advantage || "",
+            channels: parsedData.channels || "",
+            customer_segments: parsedData.customer_segments || "",
+            early_adopters: parsedData.early_adopters || "",
+            cost_structure: parsedData.cost_structure || "",
+            revenue_streams: parsedData.revenue_streams || ""
+          }
+        }
+      }
+    } catch (error) {
+      console.error('localStorageからデータを取得できませんでした:', error)
+    }
+    
+    // データが取得できない場合はダミーデータを返す
+    return {
+      ideaName: "精密農業向けスマート農業センシング&管理プラットフォーム",
+      canvasData: {
+        problem: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題",
+        existing_alternatives: "• ベテラン農家の長年の経験と勘（人依存、再現性なし、若手・新規農家が活用困難）\n• 安価なアナログ・デジタル機器による手動記録・管理（データ断片化、記録・分析が煩雑、リアルタイム性が低い）",
+        solution: "• 土壌・気象・植物画像をリアルタイム測定する小型センシングデバイス\n• 作物生育・水管理・病害予測を可視化するスマートフォンアプリ\n• クラウドでの自動データ蓄積とAI農業アドバイス\n• 低コスト・低消費電力設計、太陽光発電対応",
+        key_metrics: "• センサー導入台数\n• SaaS継続率（月間解約率）\n• アプリ利用率（日次・週次アクティブユーザー）",
+        unique_value_proposition: "「使いやすい」スマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
+        high_level_concept: "「使いやすい」スマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
+        unfair_advantage: "• 独自の超小型・低消費電力センサー技術（例：MEMS、画像センサー）\n• プリンターヘッド技術を活用した農業散布機器との統合可能性\n• 国内製造による品質・信頼性、全国販売網構築可能性\n• スマートグラス・AR技術との将来統合（例：独自MOVARIOスマートグラス）",
+        channels: "• 地域農協（JA）との協業販売\n• 全国農業機械販売ルート",
+        customer_segments: "中小規模の農業従事者",
+        early_adopters: "日本国内の米・野菜農家",
+        cost_structure: "• センサー・ハードウェア開発・量産コスト\n• スマートフォンアプリ・クラウドプラットフォーム開発・運用\n• 顧客サポート・チャネル開発（営業・代理店）",
+        revenue_streams: "• センサーデバイス販売（初期導入コスト）\n• 月額または年額SaaSダッシュボード利用料"
+      }
+    }
   }
+
+  // データを取得
+  const { ideaName, canvasData } = getCanvasData()
 
   useEffect(() => {
     // ログイン状態をチェック
@@ -64,20 +99,44 @@ export default function FirstCheckPage() {
     checkAuth()
   }, [])
 
+
+
   const handleComplete = async () => {
     setIsSubmitting(true)
     
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    setTimeout(() => {
-      alert('リーンキャンバスが保存されました（デザイン確認用）')
+    try {
+      console.log('handleComplete called, calling fetchItem...')
+      
+      // 現在表示されているデータを取得
+      const currentData = getCanvasData()
+      
+      // fetchItem関数を呼び出してバックエンドAPIにPOST
+      const result = await fetchItem({
+        ...currentData.canvasData,
+        idea_name: currentData.ideaName
+      })
+      
+      console.log('Project created successfully:', result)
+      alert('リーンキャンバスが正常に保存されました！')
+      
+      // 成功後、キャンバス一覧にリダイレクト
+      window.location.href = '/canvas-list'
+      
+    } catch (error) {
+      console.error('Error in handleComplete:', error)
+      alert('保存に失敗しました。エラーを確認してください。')
+    } finally {
       setIsSubmitting(false)
-    }, 1000)
+    }
   }
 
   const handleReset = () => {
     if (confirm('入力内容をリセットしますか？')) {
-      alert('リセットされました（デザイン確認用）')
+      // localStorageのデータをクリア
+      localStorage.removeItem('leanCanvasData')
+      alert('リセットされました。manualページに戻って入力し直してください。')
+      // manualページに戻る
+      window.location.href = '/canvas/create/manual'
     }
   }
 
