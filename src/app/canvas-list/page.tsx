@@ -3,64 +3,20 @@
 import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 
-interface Canvas {
+interface Project {
   project_id: number
   project_name: string
-  admin_name: string
-  last_updated: string
-  role: string
   created_at: string
-  current_version: number
 }
 
 export default function CanvasListPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [canvases, setCanvases] = useState<Canvas[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'project_name' | 'admin_name' | 'last_updated' | 'created_at'>('last_updated')
+  const [sortBy, setSortBy] = useState<'project_name' | 'created_at'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [showCreateModal, setShowCreateModal] = useState(false)
-
-  // ダミーデータ
-  const dummyCanvases: Canvas[] = [
-    {
-      project_id: 1,
-      project_name: "ズキラク",
-      admin_name: "のーち",
-      last_updated: "2024-01-15T10:30:00Z",
-      role: "admin",
-      created_at: "2024-01-10T09:00:00Z",
-      current_version: 3
-    },
-    {
-      project_id: 2,
-      project_name: "パーソナルビジュアルケア",
-      admin_name: "のな",
-      last_updated: "2024-01-14T16:45:00Z",
-      role: "editor",
-      created_at: "2024-01-08T14:20:00Z",
-      current_version: 2
-    },
-    {
-      project_id: 3,
-      project_name: "YOTSUBA",
-      admin_name: "ふじさん",
-      last_updated: "2024-01-13T11:15:00Z",
-      role: "editor",
-      created_at: "2024-01-05T10:30:00Z",
-      current_version: 1
-    },
-    {
-      project_id: 4,
-      project_name: "カミログ",
-      admin_name: "かっさあ",
-      last_updated: "2024-01-13T11:15:00Z",
-      role: "editor",
-      created_at: "2024-01-05T10:30:00Z",
-      current_version: 1
-    }
-  ]
 
   useEffect(() => {
     const initializePage = async () => {
@@ -76,30 +32,30 @@ export default function CanvasListPage() {
           
           // プロジェクト取得を試行
           try {
-            const projectsResponse = await fetch('/projects', {
+            console.log('Fetching projects from /api/projects...')
+            const projectsResponse = await fetch('/api/projects', {
               credentials: 'include',
             })
             
             if (projectsResponse.ok) {
               const data = await projectsResponse.json()
-              setCanvases(data.projects)
+              console.log('Projects fetched successfully:', data)
+              setProjects(data)
             } else {
-              // バックエンド未接続時はダミーデータを使用
-              setCanvases(dummyCanvases)
+              console.error('Failed to fetch projects:', projectsResponse.status, projectsResponse.statusText)
+              setProjects([])
             }
           } catch (err) {
-            // プロジェクト取得エラー時はダミーデータを使用
-            setCanvases(dummyCanvases)
+            console.error('Error fetching projects:', err)
+            setProjects([])
           }
         } else {
-          // 認証エラー時はダミーユーザーとダミーデータを使用
-          setUser({ user_id: 1, email: "demo@example.com", created_at: "2024-01-01T00:00:00Z" })
-          setCanvases(dummyCanvases)
+          console.error('Authentication failed:', authResponse.status)
+          window.location.href = '/login'
         }
       } catch (err) {
-        // 全体的なエラー時はダミーデータを使用
-        setUser({ user_id: 1, email: "demo@example.com", created_at: "2024-01-01T00:00:00Z" })
-        setCanvases(dummyCanvases)
+        console.error('Error in initializePage:', err)
+        window.location.href = '/login'
       } finally {
         setLoading(false)
       }
@@ -112,20 +68,21 @@ export default function CanvasListPage() {
     if (!confirm('このプロジェクトを削除しますか？')) return
     
     try {
-      const response = await fetch(`projects/${projectId}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
       
       if (response.ok) {
-        setCanvases(canvases.filter(canvas => canvas.project_id !== projectId))
+        setProjects(projects.filter(project => project.project_id !== projectId))
+        console.log('Project deleted successfully')
       } else {
-        // バックエンド未接続時はフロントエンドのみで削除
-        setCanvases(canvases.filter(canvas => canvas.project_id !== projectId))
+        console.error('Failed to delete project:', response.status)
+        alert('プロジェクトの削除に失敗しました')
       }
     } catch (err) {
-      // エラー時はフロントエンドのみで削除
-      setCanvases(canvases.filter(canvas => canvas.project_id !== projectId))
+      console.error('Error deleting project:', err)
+      alert('プロジェクトの削除に失敗しました')
     }
   }
 
@@ -144,16 +101,15 @@ export default function CanvasListPage() {
   }
 
   // 検索と並び替えの処理
-  const filteredAndSortedCanvases = canvases
-    .filter(canvas => 
-      canvas.project_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      canvas.admin_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredAndSortedProjects = projects
+    .filter(project => 
+      project.project_name.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       let aValue: string | number = a[sortBy]
       let bValue: string | number = b[sortBy]
       
-      if (sortBy === 'last_updated' || sortBy === 'created_at') {
+      if (sortBy === 'created_at') {
         aValue = new Date(aValue as string).getTime()
         bValue = new Date(bValue as string).getTime()
       }
@@ -208,7 +164,7 @@ export default function CanvasListPage() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="プロジェクト名や管理者で検索..."
+                    placeholder="プロジェクト名で検索..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors"
@@ -225,13 +181,11 @@ export default function CanvasListPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'project_name' | 'admin_name' | 'last_updated' | 'created_at')}
+                    onChange={(e) => setSortBy(e.target.value as 'project_name' | 'created_at')}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors h-10"
                   >
-                    <option value="last_updated">最終更新日</option>
-                    <option value="project_name">プロジェクト名</option>
-                    <option value="admin_name">管理者</option>
                     <option value="created_at">作成日</option>
+                    <option value="project_name">プロジェクト名</option>
                   </select>
                 </div>
                 <div>
@@ -247,7 +201,7 @@ export default function CanvasListPage() {
             </div>
           </div>
 
-          {/* キャンバス一覧 */}
+          {/* プロジェクト一覧 */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -257,13 +211,7 @@ export default function CanvasListPage() {
                       プロジェクト名
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      管理者
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      最終更新日
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      役割
+                      作成日
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       操作
@@ -271,33 +219,25 @@ export default function CanvasListPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredAndSortedCanvases.length === 0 ? (
+                  {filteredAndSortedProjects.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                        {searchTerm ? '検索結果が見つかりませんでした' : 'キャンバスがまだありません'}
+                      <td colSpan={3} className="px-6 py-12 text-center text-gray-500">
+                        {searchTerm ? '検索結果が見つかりませんでした' : 'プロジェクトがまだありません'}
                       </td>
                     </tr>
                   ) : (
-                    filteredAndSortedCanvases.map((canvas) => (
+                    filteredAndSortedProjects.map((project) => (
                       <tr 
-                        key={canvas.project_id} 
+                        key={project.project_id} 
                         className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => window.location.href = `/canvas/${canvas.project_id}`}
+                        onClick={() => window.location.href = `/canvas/${project.project_id}`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{canvas.project_name}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{canvas.admin_name}</div>
+                          <div className="text-sm font-medium text-gray-900">{project.project_name}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">
-                            {new Date(canvas.last_updated).toLocaleDateString('ja-JP')}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">
-                            {canvas.role === 'admin' ? '管理者' : '編集者'}
+                            {new Date(project.created_at).toLocaleDateString('ja-JP')}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -305,7 +245,7 @@ export default function CanvasListPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleDelete(canvas.project_id)
+                                handleDelete(project.project_id)
                               }}
                               className="text-red-500 hover:text-red-700 transition-colors"
                             >
