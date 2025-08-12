@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Header from '@/components/Header'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
@@ -31,21 +32,6 @@ export default function DashboardPage() {
     checkAuth()
   }, [])
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      })
-      
-      if (response.ok) {
-        window.location.href = '/login'
-      }
-    } catch (err) {
-      console.error('ログアウトエラー:', err)
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -59,31 +45,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <nav className="bg-white shadow-lg border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <div>
-                <h1 className="text-xl font-semibold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                  ConceptCraft
-                </h1>
-                <p className="text-xs text-slate-600 font-medium">by tantan</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-slate-700 font-medium">
-                こんにちは、{user?.email}さん (ID: {user?.user_id})
-              </span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-all transform hover:scale-105 shadow-sm"
-              >
-                ログアウト
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Header user={user} />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">

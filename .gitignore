@@ -3,6 +3,8 @@ node_modules/
 /.pnp
 .pnp.js
 
+npm-cache/
+
 # Build outputs
 .next/
 /out/
