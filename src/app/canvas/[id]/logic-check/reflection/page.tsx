@@ -47,6 +47,7 @@ export default function ReflectionPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [hasAiProposal, setHasAiProposal] = useState(false)
 
   // ダミーデータ（バックエンド未接続時のデザイン確認用）
   const dummyOriginalCanvas: LeanCanvas = {
@@ -141,24 +142,143 @@ export default function ReflectionPage() {
           const userData = await response.json()
           setUser(userData)
           
-          // ローカルストレージから回答データを取得
-          const savedAnswers = localStorage.getItem(`wall-hitting-answers-${projectId}`)
-          if (savedAnswers) {
-            const parsedAnswers = JSON.parse(savedAnswers)
-            setQuestions(parsedAnswers)
+          // ローカルストレージからwall-hittingの回答データを取得
+          const userAnswersData = localStorage.getItem('userAnswersData')
+          if (userAnswersData) {
+            try {
+              const parsedData = JSON.parse(userAnswersData)
+              if (parsedData.questions) {
+                setQuestions(parsedData.questions)
+              } else {
+                setQuestions(dummyQuestions)
+              }
+            } catch (error) {
+              console.error('ユーザー回答データの解析エラー:', error)
+              setQuestions(dummyQuestions)
+            }
           } else {
             // 保存された回答がない場合はダミーデータを使用
             setQuestions(dummyQuestions)
           }
           
-          // バックエンド未接続時はダミーデータを使用
-          setOriginalCanvas(dummyOriginalCanvas)
-          setUpdatedCanvas(dummyUpdatedCanvas)
+          // ローカルストレージからAIの更新案を取得
+          const canvasUpdateResult = localStorage.getItem('canvasUpdateResult')
+          let aiUpdatedCanvas: LeanCanvas | null = null
+          
+          console.log('ローカルストレージから取得したcanvasUpdateResult:', canvasUpdateResult)
+          
+          if (canvasUpdateResult) {
+            try {
+              const parsedResult = JSON.parse(canvasUpdateResult)
+              console.log('パースされたAI更新案データ:', parsedResult)
+              
+              if (parsedResult.success && parsedResult.updated_canvas) {
+                // AIから提案された更新後のキャンバスを構築
+                aiUpdatedCanvas = {
+                  problem: parsedResult.updated_canvas.problem || "",
+                  existing_alternatives: parsedResult.updated_canvas.existing_alternatives || "",
+                  solution: parsedResult.updated_canvas.solution || "",
+                  key_metrics: parsedResult.updated_canvas.key_metrics || "",
+                  unique_value_proposition: parsedResult.updated_canvas.unique_value_proposition || "",
+                  high_level_concept: parsedResult.updated_canvas.high_level_concept || "",
+                  unfair_advantage: parsedResult.updated_canvas.unfair_advantage || "",
+                  channels: parsedResult.updated_canvas.channels || "",
+                  customer_segments: parsedResult.updated_canvas.customer_segments || "",
+                  early_adopters: parsedResult.updated_canvas.early_adopters || "",
+                  cost_structure: parsedResult.updated_canvas.cost_structure || "",
+                  revenue_streams: parsedResult.updated_canvas.revenue_streams || "",
+                  idea_name: parsedResult.updated_canvas.idea_name || ""
+                }
+                console.log('AIから提案された更新後のキャンバス:', aiUpdatedCanvas)
+                setHasAiProposal(true)
+              } else {
+                console.log('AI更新案データが不正な形式です:', parsedResult)
+                setHasAiProposal(false)
+              }
+            } catch (error) {
+              console.error('AI更新案データの解析エラー:', error)
+              setHasAiProposal(false)
+            }
+          } else {
+            console.log('ローカルストレージにAI更新案データがありません')
+            setHasAiProposal(false)
+          }
+          
+          // 現在のプロジェクトのリーンキャンバスを取得
+          try {
+            const canvasResponse = await fetch(`/projects/${projectId}/latest`, {
+              credentials: 'include',
+            })
+            
+            if (canvasResponse.ok) {
+              const canvasData = await canvasResponse.json()
+              console.log('バックエンドから取得したデータ:', canvasData)
+              
+              // fetchCanvasDataと同じ方法でデータを処理
+              if (canvasData && typeof canvasData === 'object') {
+                // edit_idをキーとして持つオブジェクトから最初のデータを取得
+                const editId = Object.keys(canvasData)[0]
+                const canvasDetails = canvasData[editId]
+                
+                if (canvasDetails && typeof canvasDetails === 'object') {
+                  // Lean Canvasデータを構築
+                  const currentCanvas: LeanCanvas = {
+                    problem: canvasDetails.problem || "",
+                    existing_alternatives: canvasDetails.existing_alternatives || "",
+                    solution: canvasDetails.solution || "",
+                    key_metrics: canvasDetails.key_metrics || "",
+                    unique_value_proposition: canvasDetails.unique_value_proposition || "",
+                    high_level_concept: canvasDetails.high_level_concept || "",
+                    unfair_advantage: canvasDetails.unfair_advantage || "",
+                    channels: canvasDetails.channels || "",
+                    customer_segments: canvasDetails.customer_segments || "",
+                    early_adopters: canvasDetails.early_adopters || "",
+                    cost_structure: canvasDetails.cost_structure || "",
+                    revenue_streams: canvasDetails.revenue_streams || "",
+                    idea_name: canvasDetails.idea_name || ""
+                  }
+                  
+                  console.log('構築されたLean Canvasデータ:', currentCanvas)
+                  setOriginalCanvas(currentCanvas)
+                  
+                  // 更新後のキャンバスはAIの提案があればそれを使用、なければ現在のキャンバスをベースに作成
+                  if (aiUpdatedCanvas) {
+                    setUpdatedCanvas(aiUpdatedCanvas)
+                  } else {
+                    // AIの提案がない場合は現在のキャンバスをベースに作成
+                    setUpdatedCanvas(currentCanvas)
+                  }
+                } else {
+                  // データが期待される形式でない場合はダミーデータを使用
+                  console.log('バックエンドのデータ形式が期待と異なります。')
+                  setOriginalCanvas(dummyOriginalCanvas)
+                  setUpdatedCanvas(aiUpdatedCanvas || dummyUpdatedCanvas)
+                }
+              } else {
+                // データが期待される形式でない場合はダミーデータを使用
+                console.log('バックエンドのデータ形式が期待と異なります。')
+                setOriginalCanvas(dummyOriginalCanvas)
+                setUpdatedCanvas(aiUpdatedCanvas || dummyUpdatedCanvas)
+              }
+            } else {
+              // バックエンドからデータが取得できない場合はダミーデータを使用
+              console.log('バックエンドからのレスポンスが正常ではありません。')
+              setOriginalCanvas(dummyOriginalCanvas)
+              setUpdatedCanvas(aiUpdatedCanvas || dummyUpdatedCanvas)
+            }
+          } catch (error) {
+            console.error('リーンキャンバス取得エラー:', error)
+            // エラー時はダミーデータを使用
+            setOriginalCanvas(dummyOriginalCanvas)
+            setUpdatedCanvas(aiUpdatedCanvas || dummyUpdatedCanvas)
+          }
+          
           setAnalysisResults(dummyAnalysisResults)
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
+        console.error('認証エラー:', err)
         // エラー時もダミーデータを使用
         setOriginalCanvas(dummyOriginalCanvas)
         setUpdatedCanvas(dummyUpdatedCanvas)
@@ -259,62 +379,127 @@ export default function ReflectionPage() {
               <p className="text-gray-600">AIの分析結果をリーンキャンバスに反映します</p>
             </div>
 
-            {/* AI分析結果セクション */}
+
+
+            {/* 更新前のリーンキャンバス表示 */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
-                <div className="bg-[#FFBB3F] text-white p-3 rounded-full mr-4">
+                <div className="bg-gray-500 text-white p-3 rounded-full mr-4">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">AI分析結果</h2>
-                  <p className="text-gray-600">あなたの回答を基に、リーンキャンバスの改善点を分析しました</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">更新前のリーンキャンバス</h2>
+                  <p className="text-gray-600">更新前の状態です</p>
                 </div>
               </div>
 
-              {/* 差分表示 */}
-              <div className="space-y-6">
-                {analysisResults.map((result, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center mb-3">
-                      <div className="bg-[#FFBB3F] text-white px-2 py-1 rounded text-xs font-bold mr-3">
-                        {result.field === 'problem' && '顧客課題'}
-                        {result.field === 'customer_segments' && '顧客セグメント'}
-                        {result.field === 'key_metrics' && '主要指標'}
-                        {result.field === 'solution' && '解決策'}
-                        {result.field === 'unique_value_proposition' && '独自の価値'}
-                        {result.field === 'unfair_advantage' && '圧倒的優位性'}
-                        {result.field === 'channels' && '販路'}
-                        {result.field === 'early_adopters' && 'アーリーアダプター'}
-                        {result.field === 'cost_structure' && '費用構造'}
-                        {result.field === 'revenue_streams' && '収益の流れ'}
-                        {result.field === 'idea_name' && 'アイデア名'}
-                      </div>
-                      <span className="text-sm text-gray-600">改善提案</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">変更前</h4>
-                        <div className="bg-gray-50 p-3 rounded text-sm text-gray-600 whitespace-pre-line">
-                          {result.before}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">変更後</h4>
-                        <div className="bg-green-50 p-3 rounded text-sm text-gray-800 whitespace-pre-line border border-green-200">
-                          {result.after}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-blue-50 p-3 rounded">
-                      <h4 className="text-sm font-medium text-blue-800 mb-1">改善理由</h4>
-                      <p className="text-sm text-blue-700">{result.reason}</p>
-                    </div>
+              {/* アイデア名ヘッダー */}
+              <div className="flex items-center mb-6">
+                <div className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-l-xl text-base font-bold shadow-md">
+                  アイデア名
+                </div>
+                <div className="bg-gray-100 border border-gray-200 px-6 py-3 rounded-r-xl flex-1 shadow-sm">
+                  <span className="text-gray-700 font-medium">{originalCanvas.idea_name}</span>
+                </div>
+              </div>
+
+              {/* メインキャンバス表示（読み取り専用） */}
+              <div className="grid grid-cols-10 gap-2 auto-rows-min">
+                {/* 1行目 */}
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    顧客課題
                   </div>
-                ))}
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.problem}
+                  </div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    解決策
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.solution}
+                  </div>
+                </div>
+                <div className="col-span-2 row-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    独自の価値
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[8rem]">
+                    {originalCanvas.unique_value_proposition}
+                  </div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    圧倒的優位性
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.unfair_advantage}
+                  </div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    顧客セグメント
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.customer_segments}
+                  </div>
+                </div>
+
+                {/* 2行目 */}
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    代替品
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.existing_alternatives}
+                  </div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    主要指標
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.key_metrics}
+                  </div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    販路
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.channels}
+                  </div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    アーリーアダプター
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.early_adopters}
+                  </div>
+                </div>
+
+                {/* 3行目 */}
+                <div className="col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    費用構造
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.cost_structure}
+                  </div>
+                </div>
+                <div className="col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
+                    収益の流れ
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">
+                    {originalCanvas.revenue_streams}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -327,8 +512,15 @@ export default function ReflectionPage() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">更新後のリーンキャンバス</h2>
-                  <p className="text-gray-600">以下の内容でキャンバスを更新します</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                    {hasAiProposal ? 'AIから提案された新しいリーンキャンバス' : '更新後のリーンキャンバス'}
+                  </h2>
+                  <p className="text-gray-600">
+                    {hasAiProposal 
+                      ? 'あなたの回答を基にAIが分析し、改善案を提案しました'
+                      : 'AIの提案データが見つかりません。現在のキャンバスを編集してください。'
+                    }
+                  </p>
                 </div>
               </div>
 
@@ -502,7 +694,7 @@ export default function ReflectionPage() {
             </div>
 
             {/* ボタン群 */}
-            <div className="flex items-center justify-center space-x-4">
+            <div className="flex items-center justify-center space-x-4 mb-12">
               <button
                 onClick={handleUpdateCanvas}
                 disabled={isUpdating}
@@ -527,7 +719,7 @@ export default function ReflectionPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-700 mb-1">参考：あなたの回答</h3>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-1">AIからの質問とあなたの回答</h3>
                   <p className="text-gray-500 text-sm">以下の回答を基にAIが分析を行いました</p>
                 </div>
               </div>

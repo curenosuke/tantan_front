@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import fetchCanvasData from '@/api/fetchCanvasData'
+import fetchConsistencyCheck, { ConsistencyCheckResponse } from '@/api/fetchConsistencyCheck'
 
 interface LeanCanvas {
   problem: string
@@ -31,6 +33,7 @@ export default function LogicCheckPage() {
   const [canvasData, setCanvasData] = useState<LeanCanvas | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
+  const [consistencyCheckResult, setConsistencyCheckResult] = useState<ConsistencyCheckResponse | null>(null)
 
   // ダミーデータ（バックエンド未接続時のデザイン確認用）
   const dummyCanvasData: LeanCanvas = {
@@ -59,13 +62,21 @@ export default function LogicCheckPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setCanvasData(dummyCanvasData)
+          
+          // 認証成功後、バックエンドからデータを取得
+          const fetchedData = await fetchCanvasData(projectId)
+          if (fetchedData) {
+            setCanvasData(fetchedData)
+          } else {
+            // データが取得できない場合はダミーデータを使用
+            setCanvasData(dummyCanvasData)
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
+        console.error('認証チェックエラー:', err)
+        // エラー時はダミーデータを使用
         setCanvasData(dummyCanvasData)
       } finally {
         setLoading(false)
@@ -73,7 +84,7 @@ export default function LogicCheckPage() {
     }
 
     checkAuth()
-  }, [])
+  }, [projectId])
 
   const handleStartLogicCheck = () => {
     setShowConfirmModal(true)
@@ -83,14 +94,26 @@ export default function LogicCheckPage() {
     setIsStarting(true)
     setShowConfirmModal(false)
     
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    setTimeout(() => {
-      alert('論理チェックを開始しました（デザイン確認用）')
+    try {
+      // 整合性確認APIを呼び出し
+      const result = await fetchConsistencyCheck(projectId)
+      
+      if (result && result.success && result.analysis) {
+        // 結果をローカルストレージに保存して、wall-hittingページで使用
+        localStorage.setItem(`consistency-check-result-${projectId}`, JSON.stringify(result))
+        setConsistencyCheckResult(result)
+        
+        // 壁打ちページに遷移
+        router.push(`/canvas/${projectId}/logic-check/wall-hitting`)
+      } else {
+        alert('整合性確認の実行に失敗しました。もう一度お試しください。')
+        setIsStarting(false)
+      }
+    } catch (error) {
+      console.error('整合性確認エラー:', error)
+      alert('整合性確認の実行中にエラーが発生しました。もう一度お試しください。')
       setIsStarting(false)
-      // 壁打ちページに遷移
-      router.push(`/canvas/${projectId}/logic-check/wall-hitting`)
-    }, 1000)
+    }
   }
 
   const handleCancel = () => {
@@ -262,13 +285,68 @@ export default function LogicCheckPage() {
 
             {/* 論理チェックスタートボタン */}
             <div className="flex justify-center">
-              <button
-                onClick={handleStartLogicCheck}
-                disabled={isStarting}
-                className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {isStarting ? '論理チェック中...' : '論理チェックスタート'}
-              </button>
+              {isStarting ? (
+                <div className="text-center">
+                  <div className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-8 py-4 rounded-full text-lg font-medium shadow-lg">
+                    <div className="flex items-center space-x-3">
+                      {/* AI思考アニメーション */}
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span>AIが思考中...</span>
+                    </div>
+                  </div>
+                  
+                  {/* 思考プロセス表示 */}
+                  <div className="mt-6 max-w-md mx-auto">
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                      <div className="flex items-center mb-4">
+                        <div className="bg-blue-100 text-blue-600 p-2 rounded-full mr-3">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900">AI分析プロセス</h3>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-sm text-gray-600">リーンキャンバスの各要素を分析中...</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-gray-600">論理的整合性をチェック中...</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" style={{ animationDelay: '500ms' }}></div>
+                          <span className="text-sm text-gray-600">改善点を特定中...</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '1000ms' }}></div>
+                          <span className="text-sm text-gray-600">質問を生成中...</span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                        <p className="text-xs text-blue-700 text-center">
+                          AIがリーンキャンバスを深く分析して、<br />
+                          論理的整合性の観点から改善点を特定しています
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartLogicCheck}
+                  className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
+                >
+                  論理チェックスタート
+                </button>
+              )}
             </div>
           </div>
         </div>

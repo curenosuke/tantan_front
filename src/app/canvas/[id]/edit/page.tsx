@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import fetchCanvasData from '@/api/fetchCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -60,8 +61,21 @@ export default function CanvasEditPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setCanvasData(dummyCanvasData)
+          
+          // バックエンドからデータを取得
+          try {
+            const fetchedData = await fetchCanvasData(projectId)
+            if (fetchedData) {
+              console.log('バックエンドからデータを取得しました:', fetchedData)
+              setCanvasData(fetchedData)
+            } else {
+              console.log('バックエンドからデータを取得できませんでした。ダミーデータを使用します。')
+              setCanvasData(dummyCanvasData)
+            }
+          } catch (error) {
+            console.error('データ取得中にエラーが発生しました:', error)
+            setCanvasData(dummyCanvasData)
+          }
         } else {
           window.location.href = '/login'
         }
@@ -74,7 +88,7 @@ export default function CanvasEditPage() {
     }
 
     checkAuth()
-  }, [])
+  }, [projectId])
 
   // 初期表示時にテキストエリアの高さを調整
   useEffect(() => {
@@ -105,17 +119,40 @@ export default function CanvasEditPage() {
     setIsSubmitting(true)
     setShowConfirmModal(false)
     
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    setTimeout(() => {
-      alert('リーンキャンバスが更新されました（デザイン確認用）')
+    try {
+      // バックエンドにデータを送信
+      const response = await fetch(`/projects/${projectId}/canvas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...canvasData,
+          change_reason: changeReason
+        })
+      })
+      
+      if (response.ok) {
+        alert('リーンキャンバスが更新されました')
+        router.push(`/canvas/${projectId}`)
+      } else {
+        alert('更新に失敗しました。もう一度お試しください。（まだバックエンドに接続してません！（のうち））')
+      }
+    } catch (error) {
+      console.error('更新中にエラーが発生しました:', error)
+      alert('更新中にエラーが発生しました。もう一度お試しください。')
+    } finally {
       setIsSubmitting(false)
-      router.push(`/canvas/${projectId}`)
-    }, 1000)
+    }
   }
 
   const handleCancel = () => {
     setShowConfirmModal(false)
+  }
+
+  const handleBack = () => {
+    router.push(`/canvas/${projectId}`)
   }
 
   // テキストエリアの自動リサイズ関数
@@ -160,7 +197,15 @@ export default function CanvasEditPage() {
             {/* ヘッダー部分 */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">リーンキャンバス編集</h1>
-              <p className="text-gray-600">各項目を直接編集できます</p>
+              <p className="text-gray-600 mb-2">各項目を直接編集できます</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-blue-800 flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  💡 <strong>編集のヒント:</strong> 各フィールドにマウスを重ねると編集アイコンが表示されます。クリックして直接入力できます。
+                </p>
+              </div>
             </div>
 
             {/* リーンキャンバス編集フォーム */}
@@ -170,21 +215,27 @@ export default function CanvasEditPage() {
                 <div className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-6 py-3 rounded-l-xl text-base font-bold shadow-md">
                   アイデア名
                 </div>
-                <div className="bg-white border border-gray-200 px-6 py-3 rounded-r-xl flex-1 shadow-sm">
+                <div className="bg-white border-2 border-gray-200 hover:border-[#FFBB3F] px-6 py-3 rounded-r-xl flex-1 shadow-sm transition-all duration-200 group relative">
                   <input
                     type="text"
                     value={canvasData.idea_name}
                     onChange={(e) => handleCanvasChange('idea_name', e.target.value)}
-                    className="w-full text-gray-900 font-medium border-none outline-none"
+                    className="w-full text-gray-900 font-medium border-none outline-none bg-transparent placeholder-gray-400 focus:placeholder-gray-300 transition-colors"
                     placeholder="アイデア名を入力"
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-4 h-4 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
               </div>
 
               {/* メインキャンバス編集 */}
               <div className="grid grid-cols-10 gap-2 auto-rows-min">
                 {/* 1行目 */}
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     顧客課題
                   </div>
@@ -192,12 +243,18 @@ export default function CanvasEditPage() {
                     value={canvasData.problem}
                     onChange={(e) => handleCanvasChange('problem', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="顧客課題を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     解決策
                   </div>
@@ -205,12 +262,18 @@ export default function CanvasEditPage() {
                     value={canvasData.solution}
                     onChange={(e) => handleCanvasChange('solution', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="解決策を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 row-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 row-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     独自の価値
                   </div>
@@ -218,12 +281,18 @@ export default function CanvasEditPage() {
                     value={canvasData.unique_value_proposition}
                     onChange={(e) => handleCanvasChange('unique_value_proposition', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[8rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[8rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="独自の価値を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     圧倒的優位性
                   </div>
@@ -231,12 +300,18 @@ export default function CanvasEditPage() {
                     value={canvasData.unfair_advantage}
                     onChange={(e) => handleCanvasChange('unfair_advantage', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="圧倒的優位性を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     顧客セグメント
                   </div>
@@ -244,14 +319,20 @@ export default function CanvasEditPage() {
                     value={canvasData.customer_segments}
                     onChange={(e) => handleCanvasChange('customer_segments', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="顧客セグメントを入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
 
                 {/* 2行目 */}
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     代替品
                   </div>
@@ -259,12 +340,18 @@ export default function CanvasEditPage() {
                     value={canvasData.existing_alternatives}
                     onChange={(e) => handleCanvasChange('existing_alternatives', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="代替品を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     主要指標
                   </div>
@@ -272,12 +359,18 @@ export default function CanvasEditPage() {
                     value={canvasData.key_metrics}
                     onChange={(e) => handleCanvasChange('key_metrics', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="主要指標を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     販路
                   </div>
@@ -285,12 +378,18 @@ export default function CanvasEditPage() {
                     value={canvasData.channels}
                     onChange={(e) => handleCanvasChange('channels', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="販路を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     アーリーアダプター
                   </div>
@@ -298,14 +397,20 @@ export default function CanvasEditPage() {
                     value={canvasData.early_adopters}
                     onChange={(e) => handleCanvasChange('early_adopters', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="アーリーアダプターを入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
 
                 {/* 3行目 */}
-                <div className="col-span-5 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-5 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     費用構造
                   </div>
@@ -313,12 +418,18 @@ export default function CanvasEditPage() {
                     value={canvasData.cost_structure}
                     onChange={(e) => handleCanvasChange('cost_structure', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="費用構造を入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="col-span-5 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
+                <div className="col-span-5 bg-white border border-gray-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow group relative">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
                     収益の流れ
                   </div>
@@ -326,10 +437,16 @@ export default function CanvasEditPage() {
                     value={canvasData.revenue_streams}
                     onChange={(e) => handleCanvasChange('revenue_streams', e.target.value)}
                     onInput={autoResizeTextarea}
-                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-none overflow-hidden"
+                    className="w-full min-h-[6rem] p-2 text-xs text-gray-700 border-2 border-gray-200 hover:border-[#FFBB3F] rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-all duration-200 resize-none overflow-hidden bg-white hover:bg-gray-50 focus:bg-white"
                     placeholder="収益の流れを入力"
                     style={{ resize: 'none', overflow: 'hidden' }}
                   />
+                  {/* 編集可能であることを示すアイコン */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-3 h-3 text-[#FFBB3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -345,8 +462,14 @@ export default function CanvasEditPage() {
               />
             </div>
 
-            {/* 保存ボタン */}
-            <div className="flex justify-center mt-8">
+            {/* ボタン群 */}
+            <div className="flex justify-center space-x-4 mt-8">
+              <button
+                onClick={handleBack}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-8 py-3 rounded-full text-lg font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
+              >
+                戻る
+              </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
