@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import fetchCanvasData from '@/api/fetchCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -50,6 +51,8 @@ export default function CanvasViewPage() {
     idea_name: "精密農業向けスマート農業センシング&管理プラットフォーム"
   }
 
+
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -60,13 +63,21 @@ export default function CanvasViewPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setCanvasData(dummyCanvasData)
+          
+          // 認証成功後、バックエンドからデータを取得
+          const fetchedData = await fetchCanvasData(projectId)
+          if (fetchedData) {
+            setCanvasData(fetchedData)
+          } else {
+            // データが取得できない場合はダミーデータを使用
+            setCanvasData(dummyCanvasData)
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
+        console.error('認証チェックエラー:', err)
+        // エラー時はダミーデータを使用
         setCanvasData(dummyCanvasData)
       } finally {
         setLoading(false)
@@ -74,7 +85,7 @@ export default function CanvasViewPage() {
     }
 
     checkAuth()
-  }, [])
+  }, [projectId])
 
   const handleDownloadPDF = async () => {
     if (!canvasRef.current || !canvasData) return

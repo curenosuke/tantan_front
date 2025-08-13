@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import fetchCanvasData from '@/api/fetchCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -19,7 +20,7 @@ interface LeanCanvas {
   cost_structure: string
   revenue_streams: string
   idea_name: string
-  version: string
+  version?: string
 }
 
 type InterviewPurpose = 'CPF' | 'PSF'
@@ -62,13 +63,26 @@ export default function InterviewPrepPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setCanvasData(dummyCanvasData)
+          
+          // 認証成功後、バックエンドからデータを取得
+          const fetchedData = await fetchCanvasData(projectId)
+          if (fetchedData) {
+            // バックエンドから取得したデータにversionプロパティを追加
+            const canvasDataWithVersion = {
+              ...fetchedData,
+              version: "latest" // バックエンドから取得した最新データ
+            }
+            setCanvasData(canvasDataWithVersion)
+          } else {
+            // データが取得できない場合はダミーデータを使用
+            setCanvasData(dummyCanvasData)
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
+        console.error('認証チェックエラー:', err)
+        // エラー時はダミーデータを使用
         setCanvasData(dummyCanvasData)
       } finally {
         setLoading(false)
@@ -76,7 +90,7 @@ export default function InterviewPrepPage() {
     }
 
     checkAuth()
-  }, [])
+  }, [projectId])
 
   const handleStartInterviewPrep = () => {
     // インタビュー準備確認ページに遷移
