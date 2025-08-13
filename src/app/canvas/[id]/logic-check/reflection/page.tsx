@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import updateCanvasData from '@/api/updateCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -175,18 +176,18 @@ export default function ReflectionPage() {
               if (parsedResult.success && parsedResult.updated_canvas) {
                 // AIから提案された更新後のキャンバスを構築
                 aiUpdatedCanvas = {
-                  problem: parsedResult.updated_canvas.problem || "",
-                  existing_alternatives: parsedResult.updated_canvas.existing_alternatives || "",
-                  solution: parsedResult.updated_canvas.solution || "",
-                  key_metrics: parsedResult.updated_canvas.key_metrics || "",
-                  unique_value_proposition: parsedResult.updated_canvas.unique_value_proposition || "",
-                  high_level_concept: parsedResult.updated_canvas.high_level_concept || "",
-                  unfair_advantage: parsedResult.updated_canvas.unfair_advantage || "",
-                  channels: parsedResult.updated_canvas.channels || "",
-                  customer_segments: parsedResult.updated_canvas.customer_segments || "",
-                  early_adopters: parsedResult.updated_canvas.early_adopters || "",
-                  cost_structure: parsedResult.updated_canvas.cost_structure || "",
-                  revenue_streams: parsedResult.updated_canvas.revenue_streams || "",
+                  problem: parsedResult.updated_canvas.Problem || parsedResult.updated_canvas.problem || "",
+                  existing_alternatives: parsedResult.updated_canvas.Existing_Alternatives || parsedResult.updated_canvas.existing_alternatives || "",
+                  solution: parsedResult.updated_canvas.Solution || parsedResult.updated_canvas.solution || "",
+                  key_metrics: parsedResult.updated_canvas.Key_Metrics || parsedResult.updated_canvas.key_metrics || "",
+                  unique_value_proposition: parsedResult.updated_canvas.Unique_Value_Proposition || parsedResult.updated_canvas.unique_value_proposition || "",
+                  high_level_concept: parsedResult.updated_canvas.Unique_Value_Proposition || parsedResult.updated_canvas.unique_value_proposition || "",
+                  unfair_advantage: parsedResult.updated_canvas.Unfair_Advantage || parsedResult.updated_canvas.unfair_advantage || "",
+                  channels: parsedResult.updated_canvas.Channels || parsedResult.updated_canvas.channels || "",
+                  customer_segments: parsedResult.updated_canvas.Customer_Segments || parsedResult.updated_canvas.customer_segments || "",
+                  early_adopters: parsedResult.updated_canvas.Early_Adopters || parsedResult.updated_canvas.early_adopters || "",
+                  cost_structure: parsedResult.updated_canvas.Cost_Structure || parsedResult.updated_canvas.cost_structure || "",
+                  revenue_streams: parsedResult.updated_canvas.Revenue_Streams || parsedResult.updated_canvas.revenue_streams || "",
                   idea_name: parsedResult.updated_canvas.idea_name || ""
                 }
                 console.log('AIから提案された更新後のキャンバス:', aiUpdatedCanvas)
@@ -325,16 +326,36 @@ export default function ReflectionPage() {
   }
 
   const handleConfirm = async () => {
+    if (!user || !updatedCanvas) {
+      alert('ユーザー情報またはキャンバスデータが取得できませんでした')
+      return
+    }
+
     setIsUpdating(true)
     setShowConfirmModal(false)
     
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    setTimeout(() => {
-      alert('リーンキャンバスが更新されました（デザイン確認用）')
+    try {
+      // 新しいAPI関数を使用してバックエンドにデータを送信
+      const result = await updateCanvasData(
+        parseInt(projectId),
+        user.user_id,
+        '論理チェック結果を反映した更新',
+        updatedCanvas as unknown as Record<string, string>
+      )
+      
+      if (result && result.success) {
+        alert('リーンキャンバスが更新されました')
+        router.push(`/canvas/${projectId}`)
+      } else {
+        const errorMessage = result?.message || '更新に失敗しました。もう一度お試しください。'
+        alert(errorMessage)
+      }
+    } catch (error) {
+      console.error('更新中にエラーが発生しました:', error)
+      alert('更新中にエラーが発生しました。もう一度お試しください。')
+    } finally {
       setIsUpdating(false)
-      router.push(`/canvas/${projectId}`)
-    }, 1000)
+    }
   }
 
   const handleCancel = () => {

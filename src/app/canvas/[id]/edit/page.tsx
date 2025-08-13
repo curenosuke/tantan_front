@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 import fetchCanvasData from '@/api/fetchCanvasData'
+import updateCanvasData from '@/api/updateCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -116,28 +117,29 @@ export default function CanvasEditPage() {
   }
 
   const handleConfirm = async () => {
+    if (!user || !canvasData) {
+      alert('ユーザー情報またはキャンバスデータが取得できませんでした')
+      return
+    }
+
     setIsSubmitting(true)
     setShowConfirmModal(false)
     
     try {
-      // バックエンドにデータを送信
-      const response = await fetch(`/projects/${projectId}/canvas`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          ...canvasData,
-          change_reason: changeReason
-        })
-      })
+      // 新しいAPI関数を使用してバックエンドにデータを送信
+      const result = await updateCanvasData(
+        parseInt(projectId),
+        user.user_id,
+        changeReason || '手動編集による更新',
+        canvasData as unknown as Record<string, string>
+      )
       
-      if (response.ok) {
+      if (result && result.success) {
         alert('リーンキャンバスが更新されました')
         router.push(`/canvas/${projectId}`)
       } else {
-        alert('更新に失敗しました。もう一度お試しください。（まだバックエンドに接続してません！（のうち））')
+        const errorMessage = result?.message || '更新に失敗しました。もう一度お試しください。'
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('更新中にエラーが発生しました:', error)
