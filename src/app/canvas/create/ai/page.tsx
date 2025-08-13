@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
+import fetchCanvasAutogenerate from '@/api/fetchCanvasAutogenerate'
 
 export default function CreateAICanvasPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
@@ -41,14 +42,23 @@ export default function CreateAICanvasPage() {
 
     setIsSubmitting(true)
     
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    setTimeout(() => {
-      alert('生成されました！次のページで必要に応じて微修正を行ってください')
+    try {
+      const response = await fetchCanvasAutogenerate(idea)
+      
+      if (response && response.idea_name) {
+        // 成功時は次のページ（/canvas/first-check）に移動
+        // 生成されたキャンバスデータをセッションストレージに保存
+        sessionStorage.setItem('generatedCanvas', JSON.stringify(response))
+        window.location.href = '/canvas/first-check'
+      } else {
+        alert('キャンバスの生成に失敗しました。もう一度お試しください。')
+        setIsSubmitting(false)
+      }
+    } catch (error) {
+      console.error('エラーが発生しました:', error)
+      alert('エラーが発生しました。もう一度お試しください。')
       setIsSubmitting(false)
-      // manualページに移動
-      window.location.href = '/canvas/create/manual'
-    }, 1000)
+    }
   }
 
   if (loading) {
@@ -120,7 +130,7 @@ export default function CreateAICanvasPage() {
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                       </svg>
-                      <span>進む</span>
+                      <span>生成する</span>
                     </div>
                   )}
                 </button>

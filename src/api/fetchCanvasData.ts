@@ -24,15 +24,35 @@ const fetchCanvasData = async (projectId: string): Promise<LeanCanvas | null> =>
       const data = await response.json()
       console.log('バックエンドから取得したデータ:', data)
       console.log('データの型:', typeof data)
-      console.log('データのキー:', Object.keys(data))
-      if (data && typeof data === 'object') {
-        console.log('最初のキーの値:', Object.values(data)[0])
+      
+      // データがnullまたはundefinedの場合の安全なチェック
+      if (!data) {
+        console.log('データがnullまたはundefinedです')
+        return null
+      }
+      
+      if (typeof data === 'object') {
+        try {
+          const keys = Object.keys(data)
+          console.log('データのキー:', keys)
+          if (keys.length > 0) {
+            console.log('最初のキーの値:', Object.values(data)[0])
+          }
+        } catch (error) {
+          console.error('Object.keys()でエラーが発生しました:', error)
+          return null
+        }
       }
       
       // バックエンドのデータ構造に基づいてLean Canvasデータを構築
-      if (data && typeof data === 'object') {
+      if (data && typeof data === 'object' && data !== null) {
         // edit_idをキーとして持つオブジェクトから最初のデータを取得
-        const editId = Object.keys(data)[0]
+        const keys = Object.keys(data)
+        if (keys.length === 0) {
+          console.log('データにキーが存在しません')
+          return null
+        }
+        const editId = keys[0]
         const canvasDetails = data[editId]
         
         if (canvasDetails && typeof canvasDetails === 'object') {
@@ -64,7 +84,7 @@ const fetchCanvasData = async (projectId: string): Promise<LeanCanvas | null> =>
       return null
       
     } else {
-      console.log('バックエンドからのレスポンスが正常ではありません。')
+      console.log(`バックエンドからのレスポンスが正常ではありません。ステータス: ${response.status}`)
       return null
     }
   } catch (error) {

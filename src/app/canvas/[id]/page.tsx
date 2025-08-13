@@ -64,7 +64,7 @@ export default function CanvasViewPage() {
           const userData = await response.json()
           setUser(userData)
           
-          // 認証成功後、バックエンドからデータを取得
+          // バックエンドからデータを取得
           const fetchedData = await fetchCanvasData(projectId)
           if (fetchedData) {
             setCanvasData(fetchedData)

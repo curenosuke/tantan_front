@@ -210,7 +210,7 @@ export default function WallHittingPage() {
       // リーンキャンバス更新案生成APIを呼び出し
       const result = await fetchCanvasUpdate(parseInt(projectId), userAnswers)
       
-      if (result && result.success && result.updates && result.updated_canvas) {
+      if (result && result.success && result.updated_canvas) {
         // 結果をローカルストレージに保存してreflectionページに遷移
         localStorage.setItem('canvasUpdateResult', JSON.stringify(result))
         
