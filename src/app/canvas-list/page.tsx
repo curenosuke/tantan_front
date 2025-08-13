@@ -22,7 +22,7 @@ export default function CanvasListPage() {
     const initializePage = async () => {
       try {
         // 認証チェックを試行
-        const authResponse = await fetch('/api/auth/me', {
+        const authResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           credentials: 'include',
         })
         
@@ -33,7 +33,7 @@ export default function CanvasListPage() {
           // プロジェクト取得を試行
           try {
             console.log('Fetching projects from /api/projects...')
-            const projectsResponse = await fetch('/api/projects', {
+            const projectsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects`, {
               credentials: 'include',
             })
             
@@ -68,7 +68,7 @@ export default function CanvasListPage() {
     if (!confirm('このプロジェクトを削除しますか？')) return
     
     try {
-      const response = await fetch(`/api/projects/${projectId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
