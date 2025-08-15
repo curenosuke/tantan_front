@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 import fetchCanvasData from '@/api/fetchCanvasData'
+import { fetchInterviewPreparation } from '@/api/fetchInterviewPreparation'
 
 interface LeanCanvas {
   problem: string
@@ -34,6 +35,8 @@ export default function InterviewPrepPage() {
   const [loading, setLoading] = useState(true)
   const [canvasData, setCanvasData] = useState<LeanCanvas | null>(null)
   const [interviewPurpose, setInterviewPurpose] = useState<InterviewPurpose>('CPF')
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
 
   // ダミーデータ（現在のリーンキャンバス）
   const dummyCanvasData: LeanCanvas = {
@@ -93,8 +96,28 @@ export default function InterviewPrepPage() {
   }, [projectId])
 
   const handleStartInterviewPrep = () => {
-    // インタビュー準備確認ページに遷移
-    router.push(`/canvas/${projectId}/interview-prep/result`)
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmGenerate = async () => {
+    setShowConfirmModal(false)
+    setIsThinking(true)
+    const res = await fetchInterviewPreparation(projectId, interviewPurpose)
+    if (res) {
+      sessionStorage.setItem('interview-prep-result', JSON.stringify({
+        purpose: interviewPurpose === 'CPF' ? 'CPF検証（顧客と課題の整合確認）' : 'PSF検証（課題とソリューションの整合確認）',
+        interviewee: res.interviewee,
+        questions: res.questions
+      }))
+      router.push(`/canvas/${projectId}/interview-prep/result`)
+    } else {
+      alert('インタビュー項目生成に失敗しました。')
+    }
+    setIsThinking(false)
+  }
+
+  const handleCancelModal = () => {
+    setShowConfirmModal(false)
   }
 
   const handleGoBack = () => {
@@ -128,6 +151,18 @@ export default function InterviewPrepPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-700 font-medium">キャンバスが見つかりませんでした</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isThinking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#FFBB3F] mx-auto mb-6"></div>
+          <p className="text-2xl font-bold text-[#FFBB3F] mb-2">AI思考中...</p>
+          <p className="text-gray-700">インタビュー項目を生成しています。しばらくお待ちください。</p>
         </div>
       </div>
     )
@@ -342,6 +377,39 @@ export default function InterviewPrepPage() {
           </div>
         </div>
       </div>
+      {/* 確認モーダル */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="bg-[#FFBB3F] text-white p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">インタビュー項目を生成します</h2>
+              <p className="text-gray-700">
+                最新のリーンキャンバスをもとにインタビュー項目を生成します。<br />
+                この操作を実行してもよろしいですか？
+              </p>
+            </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={handleCancelModal}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleConfirmGenerate}
+                className="flex-1 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
+              >
+                生成する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
