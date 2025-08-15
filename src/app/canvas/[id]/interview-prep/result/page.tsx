@@ -110,29 +110,84 @@ export default function InterviewPrepResultPage() {
     ]
   }
 
+  // 文字列から```jsonや```を除去する関数
+  function cleanJSONString(str: string) {
+    if (!str) return str;
+    return str.replace(/```json|```/g, '').trim();
+  }
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           credentials: 'include',
         })
-        
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setInterviewResult(dummyInterviewResult)
+          // sessionStorageからAPI結果を取得
+          const resultStr = sessionStorage.getItem('interview-prep-result')
+          console.log('sessionStorageから取得:', resultStr)
+          if (resultStr) {
+            const result = JSON.parse(resultStr)
+            console.log('パース後:', result)
+            // interviewee, questionsもconsole.log
+            console.log('interviewee:', result.interviewee)
+            console.log('questions:', result.questions)
+            let intervieweeObj = null
+            let questionsObj = null
+            try {
+              intervieweeObj = JSON.parse(cleanJSONString(result.interviewee));
+              console.log('intervieweeObj:', intervieweeObj)
+            } catch (e) {
+              console.error('intervieweeのパース失敗', e, result.interviewee)
+            }
+            try {
+              questionsObj = JSON.parse(cleanJSONString(result.questions));
+              console.log('questionsObj:', questionsObj)
+            } catch (e) {
+              console.error('questionsのパース失敗', e, result.questions)
+            }
+            setInterviewResult({
+              purpose: result.purpose,
+              interviewItems: questionsObj
+                ? [
+                    { category: '顧客の基本情報', questions: questionsObj['顧客の基本情報'] || [] },
+                    { category: '現在の課題と痛み', questions: questionsObj['現在の課題と痛み'] || [] },
+                    { category: '代替手段の利用状況', questions: questionsObj['代替手段の利用状況'] || [] },
+                    { category: '価値観と意思決定要因', questions: questionsObj['価値観と意思決定要因'] || [] },
+                  ]
+                : [],
+              idealInterviewee: intervieweeObj
+                ? {
+                    attributes: intervieweeObj['属性'] || [],
+                    characteristics: intervieweeObj['特徴'] || [],
+                    selectionCriteria: intervieweeObj['選定基準'] || [],
+                  }
+                : { attributes: [], characteristics: [], selectionCriteria: [] },
+              interviewTips: [
+                '相手の話を遮らず、十分に聞き出す',
+                '具体的なエピソードや体験談を引き出す',
+                '感情的な反応や表情の変化を観察する',
+                '仮説を検証する質問ではなく、事実確認の質問をする',
+                '相手の価値観や背景を理解する質問を心がける',
+                'インタビュー時間は30-45分を目安にする',
+                '録音の許可を事前に得ておく',
+                'メモを取る際は相手の話を止めないよう配慮する',
+              ],
+            })
+          } else {
+            setInterviewResult(dummyInterviewResult)
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
         setInterviewResult(dummyInterviewResult)
       } finally {
         setLoading(false)
       }
     }
-
     checkAuth()
   }, [])
 
@@ -361,7 +416,7 @@ export default function InterviewPrepResultPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">戻ることを確認します</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">本当に戻りますか？</h2>
               <p className="text-gray-700">
                 戻るとこの結果を参照できなくなりますが、よろしいですか？
               </p>
