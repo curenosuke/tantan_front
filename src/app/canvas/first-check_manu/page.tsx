@@ -51,7 +51,6 @@ export default function FirstCheckPage() {
     } catch (error) {
       console.error('localStorageからデータを取得できませんでした:', error)
     }
-    
     // データが取得できない場合はダミーデータを返す
     return {
       ideaName: "精密農業向けスマート農業センシング&管理プラットフォーム",
@@ -82,7 +81,6 @@ export default function FirstCheckPage() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           credentials: 'include',
         })
-        
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
@@ -95,33 +93,24 @@ export default function FirstCheckPage() {
         setLoading(false)
       }
     }
-
     checkAuth()
   }, [])
 
-
-
   const handleComplete = async () => {
     setIsSubmitting(true)
-    
     try {
       console.log('handleComplete called, calling fetchItem...')
-      
       // 現在表示されているデータを取得
       const currentData = getCanvasData()
-      
       // fetchItem関数を呼び出してバックエンドAPIにPOST
       const result = await fetchItem({
         ...currentData.canvasData,
         idea_name: currentData.ideaName
       })
-      
       console.log('Project created successfully:', result)
       alert('リーンキャンバスが正常に保存されました！')
-      
       // 成功後、キャンバス一覧にリダイレクト
       window.location.href = '/canvas-list'
-      
     } catch (error) {
       console.error('Error in handleComplete:', error)
       alert('保存に失敗しました。エラーを確認してください。')
@@ -154,7 +143,6 @@ export default function FirstCheckPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header user={user} />
-
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* ヘッダー部分 */}
@@ -162,7 +150,6 @@ export default function FirstCheckPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-4">リーンキャンバスの確認</h1>
             <p className="text-orange-700 text-lg font-medium">生成されたリーンキャンバスを確認してください</p>
           </div>
-
           {/* リーンキャンバス */}
           <div className="bg-white rounded-xl shadow-lg border border-orange-200 p-8 mb-6">
             {/* アイデア名ヘッダー */}
@@ -174,7 +161,6 @@ export default function FirstCheckPage() {
                 <span className="text-gray-900 font-medium">{ideaName}</span>
               </div>
             </div>
-
             {/* メインキャンバス */}
             <div className="grid grid-cols-10 gap-2">
               {/* 1行目 */}
@@ -208,7 +194,6 @@ export default function FirstCheckPage() {
                 </div>
                 <p className="text-xs text-gray-700 leading-relaxed">{canvasData.customer_segments}</p>
               </div>
-
               {/* 2行目 */}
               <div className="col-span-2 bg-white border border-orange-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
                 <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
@@ -234,7 +219,6 @@ export default function FirstCheckPage() {
                 </div>
                 <p className="text-xs text-gray-700 leading-relaxed">{canvasData.early_adopters}</p>
               </div>
-
               {/* 3行目 */}
               <div className="col-span-5 bg-white border border-orange-200 rounded-xl p-3 shadow-md hover:shadow-lg transition-shadow">
                 <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
@@ -250,7 +234,6 @@ export default function FirstCheckPage() {
               </div>
             </div>
           </div>
-
           {/* ボタン */}
           <div className="flex justify-center space-x-4">
             <button
@@ -271,7 +254,6 @@ export default function FirstCheckPage() {
                 <span>完了</span>
               )}
             </button>
-            
             <button
               onClick={handleReset}
               className="px-8 py-3 rounded-full text-base font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-300 transform hover:scale-105 shadow-md"
@@ -283,4 +265,4 @@ export default function FirstCheckPage() {
       </main>
     </div>
   )
-} 
+}

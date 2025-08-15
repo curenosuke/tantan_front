@@ -174,7 +174,7 @@ export default function ManualCanvasPage() {
     localStorage.setItem('leanCanvasData', JSON.stringify(canvasData))
     
     // first-checkページに移動
-    window.location.href = '/canvas/first-check'
+    window.location.href = '/canvas/first-check_manu'
   }
 
   if (loading) {

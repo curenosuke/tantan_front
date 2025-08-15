@@ -46,10 +46,10 @@ export default function CreateAICanvasPage() {
       const response = await fetchCanvasAutogenerate(idea)
       
       if (response && response.idea_name) {
-        // 成功時は次のページ（/canvas/first-check）に移動
+        // 成功時は次のページ（/canvas/first-check_aigen）に移動
         // 生成されたキャンバスデータをセッションストレージに保存
         sessionStorage.setItem('generatedCanvas', JSON.stringify(response))
-        window.location.href = '/canvas/first-check'
+        window.location.href = '/canvas/first-check_aigen'
       } else {
         alert('キャンバスの生成に失敗しました。もう一度お試しください。')
         setIsSubmitting(false)
