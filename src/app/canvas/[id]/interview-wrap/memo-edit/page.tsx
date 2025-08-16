@@ -11,7 +11,6 @@ interface InterviewMemo {
   interview_date: string
   interview_record: string
   interview_purpose: 'CPF' | 'PSF'
-  canvas_version: string
   uploaded_by: string
   created_at?: string
   updated_at?: string
@@ -31,10 +30,9 @@ export default function InterviewMemoEditPage() {
   const [saving, setSaving] = useState(false)
   const [memoData, setMemoData] = useState<InterviewMemo>({
     interview_target: '',
-    interview_date: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM
+    interview_date: new Date().toISOString().slice(0, 10),
     interview_record: '',
     interview_purpose: 'CPF',
-    canvas_version: 'version3',
     uploaded_by: ''
   })
 
@@ -42,51 +40,74 @@ export default function InterviewMemoEditPage() {
   const dummyMemoData: InterviewMemo = {
     memo_id: 1,
     interview_target: "農家Aさん（45歳、米作農家）",
-    interview_date: "2024-01-15T14:30:00",
+    interview_date: "2024-01-15",
     interview_record: "現在の農業管理について詳しく聞きました。\n\n• 天候に依存した水管理で不安定\n• 経験に基づく判断が多い\n• 若手の技術継承が課題\n• スマート農業に興味はあるが、コストが懸念\n\n課題：\n• 水管理の自動化\n• データに基づく判断\n• 低コストな導入方法",
     interview_purpose: 'CPF',
-    canvas_version: 'version3',
     uploaded_by: 'のーち',
     created_at: '2024-01-15T10:30:00Z',
     updated_at: '2024-01-15T16:45:00Z'
   }
 
+  // 日付を "yyyy-MM-ddTHH:mm" 形式に変換する関数
+  const toDatetimeLocal = (dateString: string) => {
+    if (!dateString) return '';
+    if (dateString.length === 16 && dateString.includes('T')) return dateString;
+    if (dateString.length >= 16 && dateString.includes('T')) return dateString.slice(0, 16);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString + 'T00:00';
+    return '';
+  };
+
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchMemo = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
-          credentials: 'include',
-        })
-        
-        if (response.ok) {
-          const userData = await response.json()
-          setUser(userData)
-          
-          // 編集モードの場合、ダミーデータを読み込み
-          if (memoId) {
-            setMemoData(dummyMemoData)
-          } else {
-            // 新規作成モードの場合、ユーザー名を設定
-            setMemoData(prev => ({
-              ...prev,
-              uploaded_by: userData.email || 'Unknown'
-            }))
+        if (memoId) {
+          // 編集モード: APIから取得
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+            credentials: 'include',
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const found = data.find((m: any) => String(m.edit_id) === String(memoId));
+            if (found) {
+              // interview_dateを "yyyy-MM-dd" 形式でセット
+              let dateOnly = '';
+              if (found.interview_date) {
+                if (found.interview_date.includes('T')) {
+                  dateOnly = found.interview_date.split('T')[0];
+                } else {
+                  dateOnly = found.interview_date;
+                }
+              }
+              setMemoData({
+                interview_target: found.interviewee_name || '',
+                interview_date: dateOnly,
+                interview_purpose: found.interview_type || 'CPF',
+                interview_record: found.interview_note || found.note || found.interview_record || '',
+                uploaded_by: found.email || '',
+              });
+            }
+          } else if (response.status === 401) {
+            window.location.href = '/login';
           }
         } else {
-          window.location.href = '/login'
+          // 新規作成: ユーザー名のみセット、interview_dateは今日の日付
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
+          if (response.ok) {
+            const userData = await response.json();
+            setMemoData(prev => ({ ...prev, uploaded_by: userData.email || 'Unknown', interview_date: new Date().toISOString().slice(0, 10) }));
+          } else {
+            setMemoData(prev => ({ ...prev, interview_date: new Date().toISOString().slice(0, 10) }));
+          }
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
-        if (memoId) {
-          setMemoData(dummyMemoData)
-        }
+        // 何もしない
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-
-    checkAuth()
-  }, [memoId])
+    };
+    fetchMemo();
+  }, [memoId, projectId]);
 
   const handleInputChange = (field: keyof InterviewMemo, value: string) => {
     setMemoData(prev => ({
@@ -198,10 +219,10 @@ export default function InterviewMemoEditPage() {
                     インタビュー実施日 <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     id="interview-date"
                     value={memoData.interview_date}
-                    onChange={(e) => handleInputChange('interview_date', e.target.value)}
+                    onChange={e => handleInputChange('interview_date', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors"
                   />
                 </div>
@@ -240,25 +261,6 @@ export default function InterviewMemoEditPage() {
                     rows={12}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors resize-vertical"
                   />
-                </div>
-
-                {/* もとにしたバージョン（メモ用） */}
-                <div>
-                  <label htmlFor="canvas-version" className="block text-sm font-medium text-gray-700 mb-2">
-                    もとにしたバージョン（メモ用）
-                  </label>
-                  <select
-                    id="canvas-version"
-                    value={memoData.canvas_version}
-                    onChange={(e) => handleInputChange('canvas_version', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors bg-white"
-                  >
-                    <option value="">バージョン指定なし</option>
-                    <option value="version1">version1</option>
-                    <option value="version2">version2</option>
-                    <option value="version3">version3</option>
-                    <option value="version4">version4</option>
-                  </select>
                 </div>
               </div>
             </div>

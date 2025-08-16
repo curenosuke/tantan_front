@@ -6,12 +6,12 @@ import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 
 interface InterviewMemo {
-  memo_id: number
-  interview_name: string
-  interview_date: string
-  uploaded_by: string
-  created_at: string
-  updated_at: string
+  interviewee_name: string;
+  interview_date: string;
+  user_id: number;
+  edit_id: number;
+  version: number | null;
+  email: string;
 }
 
 export default function InterviewWrapPage() {
@@ -21,52 +21,52 @@ export default function InterviewWrapPage() {
   
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [memos, setMemos] = useState<InterviewMemo[]>([])
+  const [memos, setMemos] = useState<InterviewMemo[]>([]);
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'interview_name' | 'interview_date' | 'uploaded_by' | 'created_at' | 'updated_at'>('created_at')
+  const [sortBy, setSortBy] = useState<'interview_name' | 'interview_date' | 'uploaded_by'>('interview_name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
   // ダミーデータ
   const dummyMemos: InterviewMemo[] = [
     {
-      memo_id: 1,
-      interview_name: "農家Aさんインタビュー",
+      interviewee_name: "農家Aさんインタビュー",
       interview_date: "2024-01-15T14:30:00",
-      uploaded_by: "のーち",
-      created_at: "2024-01-15T10:30:00Z",
-      updated_at: "2024-01-15T16:45:00Z"
+      user_id: 1,
+      edit_id: 1,
+      version: 1,
+      email: "のーち"
     },
     {
-      memo_id: 2,
-      interview_name: "農家Bさんインタビュー",
+      interviewee_name: "農家Bさんインタビュー",
       interview_date: "2024-01-14T09:15:00",
-      uploaded_by: "かっさあ",
-      created_at: "2024-01-14T16:45:00Z",
-      updated_at: "2024-01-14T18:20:00Z"
+      user_id: 2,
+      edit_id: 2,
+      version: 1,
+      email: "かっさあ"
     },
     {
-      memo_id: 3,
-      interview_name: "農家Cさんインタビュー",
+      interviewee_name: "農家Cさんインタビュー",
       interview_date: "2024-01-13T13:45:00",
-      uploaded_by: "ふじさん",
-      created_at: "2024-01-13T11:15:00Z",
-      updated_at: "2024-01-13T15:30:00Z"
+      user_id: 1,
+      edit_id: 3,
+      version: 1,
+      email: "ふじさん"
     },
     {
-      memo_id: 4,
-      interview_name: "農家Dさんインタビュー",
+      interviewee_name: "農家Dさんインタビュー",
       interview_date: "2024-01-12T10:00:00",
-      uploaded_by: "のな",
-      created_at: "2024-01-12T09:20:00Z",
-      updated_at: "2024-01-12T11:45:00Z"
+      user_id: 3,
+      edit_id: 4,
+      version: 1,
+      email: "のな"
     },
     {
-      memo_id: 5,
-      interview_name: "農家Eさんインタビュー",
+      interviewee_name: "農家Eさんインタビュー",
       interview_date: "2024-01-11T15:30:00",
-      uploaded_by: "のな",
-      created_at: "2024-01-11T14:30:00Z",
-      updated_at: "2024-01-11T17:15:00Z"
+      user_id: 2,
+      edit_id: 5,
+      version: 1,
+      email: "のな"
     }
   ]
 
@@ -81,13 +81,13 @@ export default function InterviewWrapPage() {
           const userData = await response.json()
           setUser(userData)
           // バックエンド未接続時はダミーデータを使用
-          setMemos(dummyMemos)
+          // setMemos(dummyMemos) // ダミーデータを削除
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
         // エラー時もダミーデータを使用
-        setMemos(dummyMemos)
+        // setMemos(dummyMemos) // ダミーデータを削除
       } finally {
         setLoading(false)
       }
@@ -96,11 +96,35 @@ export default function InterviewWrapPage() {
     checkAuth()
   }, [])
 
+  useEffect(() => {
+    const fetchInterviewNotes = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setMemos(Array.isArray(data) ? data : []);
+        } else if (response.status === 401) {
+          window.location.href = '/login';
+        } else {
+          setMemos([]);
+        }
+      } catch (err) {
+        setMemos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInterviewNotes();
+  }, [projectId]);
+
   const handleDelete = async (memoId: number) => {
     if (confirm('このインタビューメモを削除してもよろしいですか？')) {
       // 本来はここでバックエンドAPIを呼び出す
       // 現在はデザイン確認用のダミー処理
-      setMemos(memos.filter(memo => memo.memo_id !== memoId))
+      setMemos(memos.filter(memo => memo.edit_id !== memoId))
     }
   }
 
@@ -115,8 +139,8 @@ export default function InterviewWrapPage() {
   // 検索とソートの処理
   const filteredAndSortedMemos = memos
     .filter(memo => 
-      memo.interview_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      memo.uploaded_by.toLowerCase().includes(searchTerm.toLowerCase())
+      memo.interviewee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      memo.email.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       let aValue: string | number
@@ -124,28 +148,20 @@ export default function InterviewWrapPage() {
       
       switch (sortBy) {
         case 'interview_name':
-          aValue = a.interview_name
-          bValue = b.interview_name
+          aValue = a.interviewee_name
+          bValue = b.interviewee_name
           break
         case 'interview_date':
           aValue = a.interview_date
           bValue = b.interview_date
           break
         case 'uploaded_by':
-          aValue = a.uploaded_by
-          bValue = b.uploaded_by
-          break
-        case 'created_at':
-          aValue = new Date(a.created_at).getTime()
-          bValue = new Date(b.created_at).getTime()
-          break
-        case 'updated_at':
-          aValue = new Date(a.updated_at).getTime()
-          bValue = new Date(b.updated_at).getTime()
+          aValue = a.email
+          bValue = b.email
           break
         default:
-          aValue = a.created_at
-          bValue = b.created_at
+          aValue = a.interview_date
+          bValue = b.interview_date
       }
       
       if (sortOrder === 'asc') {
@@ -167,15 +183,14 @@ export default function InterviewWrapPage() {
   }
 
   const formatInterviewDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+    if (!dateString) return '';
+    // "yyyy-MM-dd" 形式だけ返す
+    if (dateString.includes('T')) {
+      return dateString.split('T')[0];
+    }
+    // すでに日付だけならそのまま
+    return dateString;
+  };
 
   if (loading) {
     return (
@@ -244,14 +259,12 @@ export default function InterviewWrapPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'interview_name' | 'interview_date' | 'uploaded_by' | 'created_at' | 'updated_at')}
+                      onChange={(e) => setSortBy(e.target.value as 'interview_name' | 'interview_date' | 'uploaded_by')}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors h-10"
                     >
-                      <option value="created_at">作成日</option>
-                      <option value="updated_at">最終更新日</option>
                       <option value="interview_name">インタビュー名</option>
                       <option value="interview_date">インタビュー実施日</option>
-                      <option value="uploaded_by">追加者</option>
+                      <option value="uploaded_by">アップロード者</option>
                     </select>
                   </div>
                   <div>
@@ -282,9 +295,6 @@ export default function InterviewWrapPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         アップロード者
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        最終更新日
-                      </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                         操作
                       </th>
@@ -293,38 +303,27 @@ export default function InterviewWrapPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredAndSortedMemos.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
                           {searchTerm ? '検索結果が見つかりませんでした' : 'インタビューメモがまだありません'}
                         </td>
                       </tr>
                     ) : (
-                      filteredAndSortedMemos.map((memo) => (
-                        <tr key={memo.memo_id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleEditMemo(memo.memo_id)}>
+                      filteredAndSortedMemos.map((memo, idx) => (
+                        <tr key={memo.edit_id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleEditMemo(memo.edit_id)}>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{memo.interview_name}</div>
-                                <div className="text-xs text-gray-500">作成: {formatDate(memo.created_at)}</div>
-                              </div>
-                            </div>
+                            <div className="text-sm font-medium text-gray-900">{memo.interviewee_name}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{formatInterviewDate(memo.interview_date)}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{memo.uploaded_by}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{formatDate(memo.updated_at)}</div>
+                            <div className="text-sm text-gray-900">{memo.email}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(memo.memo_id)
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleDelete(memo.edit_id);
                               }}
                               className="text-red-600 hover:text-red-900 transition-colors"
                             >

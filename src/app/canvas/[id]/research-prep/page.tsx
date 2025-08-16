@@ -4,14 +4,26 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import { uploadDocument, fetchDocuments, deleteDocument } from '@/api/documentApi'
+
+// バックエンドのEnum値を日本語ラベルに変換する関数
+const convertSourceTypeToFrontend = (sourceType: string): '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド' => {
+  const mapping: Record<string, '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'> = {
+    'company': '自社情報',
+    'customer': '市場情報',
+    'competitor': '競合情報',
+    'macrotrend': 'マクロトレンド'
+  }
+  return mapping[sourceType] || '自社情報'
+}
 
 interface ResearchFile {
-  file_id: number
+  document_id: number
   file_name: string
-  file_type: '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'
-  uploaded_by: string
-  uploaded_at: string
-  file_size: string
+  source_type: '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'
+  user_id: number
+  created_at: string
+  file_size: number
 }
 
 export default function ResearchPrepPage() {
@@ -23,91 +35,65 @@ export default function ResearchPrepPage() {
   const [files, setFiles] = useState<ResearchFile[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'all' | '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'>('all')
-  const [sortBy, setSortBy] = useState<'file_name' | 'file_type' | 'uploaded_by' | 'uploaded_at'>('uploaded_at')
+  const [sortBy, setSortBy] = useState<'file_name' | 'source_type' | 'user_id' | 'created_at'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [selectedFileType, setSelectedFileType] = useState<'自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'>('自社情報')
   const [isDragOver, setIsDragOver] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
-  // ダミーデータ
-  const dummyFiles: ResearchFile[] = [
-    {
-      file_id: 1,
-      file_name: "自社技術資料_2024.pdf",
-      file_type: "自社情報",
-      uploaded_by: "のーち",
-      uploaded_at: "2024-01-15T10:30:00Z",
-      file_size: "2.3MB"
-    },
-    {
-      file_id: 2,
-      file_name: "市場調査レポート_Q4.pdf",
-      file_type: "市場情報",
-      uploaded_by: "かっさあ",
-      uploaded_at: "2024-01-14T16:45:00Z",
-      file_size: "1.8MB"
-    },
-    {
-      file_id: 3,
-      file_name: "競合他社分析.xlsx",
-      file_type: "競合情報",
-      uploaded_by: "ふじさん",
-      uploaded_at: "2024-01-13T11:15:00Z",
-      file_size: "3.1MB"
-    },
-    {
-      file_id: 4,
-      file_name: "マクロトレンド_2024.docx",
-      file_type: "マクロトレンド",
-      uploaded_by: "のな",
-      uploaded_at: "2024-01-12T09:20:00Z",
-      file_size: "1.2MB"
-    },
-    {
-      file_id: 5,
-      file_name: "技術仕様書_v2.pdf",
-      file_type: "自社情報",
-      uploaded_by: "のな",
-      uploaded_at: "2024-01-11T14:30:00Z",
-      file_size: "4.5MB"
-    }
-  ]
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const initializePage = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const authResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           credentials: 'include',
         })
         
-        if (response.ok) {
-          const userData = await response.json()
+        if (authResponse.ok) {
+          const userData = await authResponse.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setFiles(dummyFiles)
+          
+          // ドキュメント一覧を取得
+          try {
+            const documents = await fetchDocuments(parseInt(projectId))
+            const formattedFiles: ResearchFile[] = documents.map(doc => ({
+              document_id: doc.document_id,
+              file_name: doc.file_name,
+              source_type: convertSourceTypeToFrontend(doc.source_type),
+              user_id: doc.user_id,
+              created_at: doc.created_at,
+              file_size: doc.file_size
+            }))
+            setFiles(formattedFiles)
+          } catch (error) {
+            console.error('ドキュメント取得エラー:', error)
+            setFiles([])
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
-        setFiles(dummyFiles)
+        console.error('認証チェックエラー:', err)
+        window.location.href = '/login'
       } finally {
         setLoading(false)
       }
     }
 
-    checkAuth()
-  }, [])
+    initializePage()
+  }, [projectId])
 
-  const handleDelete = async (fileId: number) => {
+  const handleDelete = async (documentId: number) => {
     if (confirm('このファイルを削除しますか？')) {
       try {
-        // バックエンド未接続時のデザイン確認用
-        setFiles(files.filter(file => file.file_id !== fileId))
-        alert('ファイルを削除しました（デザイン確認用）')
+        await deleteDocument(parseInt(projectId), documentId)
+        setFiles(files.filter(file => file.document_id !== documentId))
+        alert('ファイルを削除しました')
       } catch (err) {
         console.error('ファイル削除エラー:', err)
+        alert('ファイルの削除に失敗しました')
       }
     }
   }
@@ -116,26 +102,46 @@ export default function ResearchPrepPage() {
     setShowUploadModal(true)
   }
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     if (uploadedFiles.length === 0) {
       alert('ファイルを選択してください')
       return
     }
 
-    // バックエンド未接続時のデザイン確認用
-    const newFiles: ResearchFile[] = uploadedFiles.map((file, index) => ({
-      file_id: Date.now() + index,
-      file_name: file.name,
-      file_type: selectedFileType,
-      uploaded_by: user?.email || 'Unknown',
-      uploaded_at: new Date().toISOString(),
-      file_size: `${(file.size / 1024 / 1024).toFixed(1)}MB`
-    }))
-
-    setFiles([...newFiles, ...files])
-    setUploadedFiles([])
-    setShowUploadModal(false)
-    alert('ファイルをアップロードしました（デザイン確認用）')
+    setUploading(true)
+    const successfulUploads: ResearchFile[] = []
+    
+    try {
+      for (const file of uploadedFiles) {
+        try {
+          const result = await uploadDocument(parseInt(projectId), file, selectedFileType)
+          successfulUploads.push({
+            document_id: result.document_id,
+            file_name: result.file_info.original_filename,
+            source_type: selectedFileType,
+            user_id: user?.user_id || 0,
+            created_at: new Date().toISOString(),
+            file_size: result.file_info.file_size
+          })
+        } catch (error) {
+          console.error(`ファイル ${file.name} のアップロードに失敗:`, error)
+          alert(`ファイル「${file.name}」のアップロードに失敗しました`)
+        }
+      }
+      
+      if (successfulUploads.length > 0) {
+        setFiles([...successfulUploads, ...files])
+        alert(`${successfulUploads.length}個のファイルをアップロードしました`)
+      }
+      
+      setUploadedFiles([])
+      setShowUploadModal(false)
+    } catch (error) {
+      console.error('アップロード処理エラー:', error)
+      alert('アップロード処理中にエラーが発生しました')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -166,16 +172,15 @@ export default function ResearchPrepPage() {
   // フィルタリングとソート
   const filteredAndSortedFiles = files
     .filter(file => {
-      const matchesSearch = file.file_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          file.uploaded_by.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesFilter = filterType === 'all' || file.file_type === filterType
+      const matchesSearch = file.file_name.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesFilter = filterType === 'all' || file.source_type === filterType
       return matchesSearch && matchesFilter
     })
     .sort((a, b) => {
       let aValue: string | number = a[sortBy]
       let bValue: string | number = b[sortBy]
       
-      if (sortBy === 'uploaded_at') {
+      if (sortBy === 'created_at') {
         aValue = new Date(aValue as string).getTime()
         bValue = new Date(bValue as string).getTime()
       }
@@ -237,7 +242,7 @@ export default function ResearchPrepPage() {
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="ファイル名や追加者で検索..."
+                      placeholder="ファイル名で検索..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors"
@@ -270,13 +275,13 @@ export default function ResearchPrepPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'file_name' | 'file_type' | 'uploaded_by' | 'uploaded_at')}
+                      onChange={(e) => setSortBy(e.target.value as 'file_name' | 'source_type' | 'user_id' | 'created_at')}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors h-10"
                     >
-                      <option value="uploaded_at">アップロード日</option>
+                      <option value="created_at">アップロード日</option>
                       <option value="file_name">ファイル名</option>
-                      <option value="file_type">情報の種類</option>
-                      <option value="uploaded_by">追加者</option>
+                      <option value="source_type">情報の種類</option>
+                      <option value="user_id">追加者</option>
                     </select>
                   </div>
                   <div>
@@ -324,7 +329,7 @@ export default function ResearchPrepPage() {
                       </tr>
                     ) : (
                       filteredAndSortedFiles.map((file) => (
-                        <tr key={file.file_id} className="hover:bg-gray-50 transition-colors">
+                        <tr key={file.document_id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,31 +337,31 @@ export default function ResearchPrepPage() {
                               </svg>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">{file.file_name}</div>
-                                <div className="text-xs text-gray-500">{file.file_size}</div>
+                                <div className="text-xs text-gray-500">{(file.file_size / 1024 / 1024).toFixed(1)}MB</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              file.file_type === '自社情報' ? 'bg-blue-100 text-blue-800' :
-                              file.file_type === '市場情報' ? 'bg-green-100 text-green-800' :
-                              file.file_type === '競合情報' ? 'bg-yellow-100 text-yellow-800' :
+                              file.source_type === '自社情報' ? 'bg-blue-100 text-blue-800' :
+                              file.source_type === '市場情報' ? 'bg-green-100 text-green-800' :
+                              file.source_type === '競合情報' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-purple-100 text-purple-800'
                             }`}>
-                              {file.file_type}
+                              {file.source_type}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{file.uploaded_by}</div>
+                            <div className="text-sm text-gray-900">ユーザーID: {file.user_id}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">
-                              {new Date(file.uploaded_at).toLocaleDateString('ja-JP')}
+                              {new Date(file.created_at).toLocaleDateString('ja-JP')}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
-                              onClick={() => handleDelete(file.file_id)}
+                              onClick={() => handleDelete(file.document_id)}
                               className="text-red-500 hover:text-red-700 transition-colors"
                               title="削除"
                             >
@@ -475,10 +480,10 @@ export default function ResearchPrepPage() {
                 </button>
                 <button
                   onClick={handleFileUpload}
-                  disabled={uploadedFiles.length === 0}
+                  disabled={uploadedFiles.length === 0 || uploading}
                   className="px-6 py-2 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  アップロード
+                  {uploading ? 'アップロード中...' : 'アップロード'}
                 </button>
               </div>
             </div>
