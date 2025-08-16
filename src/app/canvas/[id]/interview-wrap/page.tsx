@@ -12,6 +12,7 @@ interface InterviewMemo {
   edit_id: number;
   version: number | null;
   email: string;
+  note_id: number; // Added note_id to the interface
 }
 
 export default function InterviewWrapPage() {
@@ -34,7 +35,8 @@ export default function InterviewWrapPage() {
       user_id: 1,
       edit_id: 1,
       version: 1,
-      email: "のーち"
+      email: "のーち",
+      note_id: 1 // Added note_id to dummy data
     },
     {
       interviewee_name: "農家Bさんインタビュー",
@@ -42,7 +44,8 @@ export default function InterviewWrapPage() {
       user_id: 2,
       edit_id: 2,
       version: 1,
-      email: "かっさあ"
+      email: "かっさあ",
+      note_id: 2 // Added note_id to dummy data
     },
     {
       interviewee_name: "農家Cさんインタビュー",
@@ -50,7 +53,8 @@ export default function InterviewWrapPage() {
       user_id: 1,
       edit_id: 3,
       version: 1,
-      email: "ふじさん"
+      email: "ふじさん",
+      note_id: 3 // Added note_id to dummy data
     },
     {
       interviewee_name: "農家Dさんインタビュー",
@@ -58,7 +62,8 @@ export default function InterviewWrapPage() {
       user_id: 3,
       edit_id: 4,
       version: 1,
-      email: "のな"
+      email: "のな",
+      note_id: 4 // Added note_id to dummy data
     },
     {
       interviewee_name: "農家Eさんインタビュー",
@@ -66,7 +71,8 @@ export default function InterviewWrapPage() {
       user_id: 2,
       edit_id: 5,
       version: 1,
-      email: "のな"
+      email: "のな",
+      note_id: 5 // Added note_id to dummy data
     }
   ]
 
@@ -132,8 +138,8 @@ export default function InterviewWrapPage() {
     router.push(`/canvas/${projectId}/interview-wrap/memo-edit`)
   }
 
-  const handleEditMemo = (memoId: number) => {
-    router.push(`/canvas/${projectId}/interview-wrap/memo-edit?id=${memoId}`)
+  const handleEditMemo = (noteId: number) => {
+    router.push(`/canvas/${projectId}/interview-wrap/memo-edit?id=${noteId}`);
   }
 
   // 検索とソートの処理
@@ -309,9 +315,17 @@ export default function InterviewWrapPage() {
                       </tr>
                     ) : (
                       filteredAndSortedMemos.map((memo, idx) => (
-                        <tr key={memo.edit_id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleEditMemo(memo.edit_id)}>
+                        <tr
+                          key={memo.note_id !== undefined && memo.note_id !== null ? memo.note_id : `noid-${memo.edit_id ?? idx}`}
+                          className={memo.note_id !== undefined && memo.note_id !== null ? "hover:bg-gray-50 transition-colors cursor-pointer" : "text-gray-400 bg-gray-100"}
+                          onClick={() => {
+                            if (memo.note_id !== undefined && memo.note_id !== null) handleEditMemo(memo.note_id);
+                          }}
+                        >
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{memo.interviewee_name}</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {memo.interviewee_name}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{formatInterviewDate(memo.interview_date)}</div>
@@ -320,6 +334,7 @@ export default function InterviewWrapPage() {
                             <div className="text-sm text-gray-900">{memo.email}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {/* 編集ボタン削除済み */}
                             <button
                               onClick={e => {
                                 e.stopPropagation();

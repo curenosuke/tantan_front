@@ -68,7 +68,7 @@ export default function InterviewMemoEditPage() {
           });
           if (response.ok) {
             const data = await response.json();
-            const found = data.find((m: any) => String(m.edit_id) === String(memoId));
+            const found = data.find((m: any) => String(m.note_id) === String(memoId));
             if (found) {
               // interview_dateを "yyyy-MM-dd" 形式でセット
               let dateOnly = '';
@@ -119,6 +119,8 @@ export default function InterviewMemoEditPage() {
   const handleSaveAndReflect = async () => {
     setSaving(true)
     try {
+      // 保存前にlocalStorageにインタビューメモを保存
+      localStorage.setItem('interviewMemo', JSON.stringify(memoData));
       // バックエンド未接続時のデザイン確認用
       await new Promise(resolve => setTimeout(resolve, 1000)) // 保存処理の模擬
       alert('インタビューメモを保存し、キャンバスに反映しました（デザイン確認用）')
@@ -163,12 +165,44 @@ export default function InterviewMemoEditPage() {
     }
   }
 
-  if (loading) {
+  if (loading || saving) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-700 font-medium">読み込み中...</p>
+          {/* AI思考アニメーション */}
+          <div className="relative mb-6">
+            <div className="w-20 h-20 bg-gradient-to-r from-[#FFBB3F] to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            {/* 思考の波紋エフェクト */}
+            <div className="absolute inset-0 w-20 h-20 border-2 border-[#FFBB3F] rounded-full animate-ping opacity-75"></div>
+            <div className="absolute inset-0 w-20 h-20 border-2 border-orange-500 rounded-full animate-ping opacity-50" style={{ animationDelay: '0.5s' }}></div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">AIが思考中...</h2>
+          <p className="text-gray-600 mb-6">インタビューメモをキャンバスに反映しています</p>
+          {/* プログレスバー */}
+          <div className="w-64 bg-gray-200 rounded-full h-2 mx-auto mb-4">
+            <div className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 h-2 rounded-full animate-pulse"></div>
+          </div>
+          {/* 思考プロセス */}
+          <div className="max-w-md mx-auto">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>メモ内容を解析中...</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                <span>キャンバス反映内容を生成中...</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                <span>最終反映を準備中...</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -281,13 +315,24 @@ export default function InterviewMemoEditPage() {
               >
                 {saving ? '保存中...' : '保存'}
               </button>
-              <button
-                onClick={handleSaveAndReflect}
-                disabled={saving}
-                className="px-8 py-3 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-full text-base font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {saving ? '保存中...' : '保存してキャンバスに反映'}
-              </button>
+              {saving ? (
+                <div className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-8 py-3 rounded-full text-base font-medium shadow-md flex items-center space-x-2">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                  <span>AIが反映中...</span>
+                </div>
+              ) : (
+                <button
+                  onClick={handleSaveAndReflect}
+                  disabled={saving}
+                  className="px-8 py-3 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-full text-base font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  保存してキャンバスに反映
+                </button>
+              )}
             </div>
           </div>
         </div>
