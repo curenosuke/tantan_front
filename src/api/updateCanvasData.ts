@@ -14,7 +14,8 @@ export default async function updateCanvasData(
   projectId: number,
   userId: number,
   updateComment: string,
-  field: Record<string, string>
+  field: Record<string, string>,
+  updateCategory: string = 'manual' // デフォルト値
 ): Promise<CanvasUpdateResponse | null> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/latest`, {
@@ -27,6 +28,7 @@ export default async function updateCanvasData(
         project_id: projectId,
         user_id: userId,
         update_comment: updateComment,
+        update_category: updateCategory, // ここでトップレベルで送る
         field: field
       })
     })

@@ -340,7 +340,8 @@ export default function ReflectionPage() {
         parseInt(projectId),
         user.user_id,
         '論理チェック結果を反映した更新',
-        updatedCanvas as unknown as Record<string, string>
+        updatedCanvas as unknown as Record<string, string>,
+        'consistency_check' // update_categoryを明示的に渡す
       )
       
       if (result && result.success) {
