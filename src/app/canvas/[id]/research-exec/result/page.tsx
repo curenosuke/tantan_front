@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import updateCanvasData from '@/api/updateCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -36,9 +37,8 @@ export default function ResearchResultPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [originalCanvas, setOriginalCanvas] = useState<LeanCanvas | null>(null)
-  const [updatedCanvas, setUpdatedCanvas] = useState<LeanCanvas | null>(null)
-  const [researchResults, setResearchResults] = useState<ResearchResult[]>([])
-  const [gptResults, setGptResults] = useState<string>('')
+  const [researchResult, setResearchResult] = useState<string>('')
+  const [updateProposal, setUpdateProposal] = useState<string>('')
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -154,27 +154,39 @@ export default function ResearchResultPage() {
           const userData = await response.json()
           setUser(userData)
           
-          // バックエンド未接続時はダミーデータを使用
-          setOriginalCanvas(dummyOriginalCanvas)
-          setUpdatedCanvas(dummyUpdatedCanvas)
-          setResearchResults(dummyResearchResults)
-          setGptResults(dummyGptResults)
+          // sessionStorageからリサーチ結果を取得
+          const storedResult = sessionStorage.getItem('researchResult')
+          if (storedResult) {
+            try {
+              const parsedResult = JSON.parse(storedResult)
+              setOriginalCanvas(parsedResult.canvas_data)
+              setResearchResult(parsedResult.research_result)
+              setUpdateProposal(parsedResult.update_proposal)
+              
+              // 結果取得後にsessionStorageをクリア
+              sessionStorage.removeItem('researchResult')
+            } catch (error) {
+              console.error('リサーチ結果の解析エラー:', error)
+              // エラー時はリサーチ実行画面に戻る
+              router.push(`/canvas/${projectId}/research-exec`)
+            }
+          } else {
+            // データがない場合はリサーチ実行画面に戻る
+            router.push(`/canvas/${projectId}/research-exec`)
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
-        setOriginalCanvas(dummyOriginalCanvas)
-        setUpdatedCanvas(dummyUpdatedCanvas)
-        setResearchResults(dummyResearchResults)
-        setGptResults(dummyGptResults)
+        console.error('初期化エラー:', err)
+        router.push(`/canvas/${projectId}/research-exec`)
       } finally {
         setLoading(false)
       }
     }
 
     checkAuth()
-  }, [projectId])
+  }, [projectId, router])
 
   const handleCanvasChange = (field: keyof LeanCanvas, value: string) => {
     if (updatedCanvas) {

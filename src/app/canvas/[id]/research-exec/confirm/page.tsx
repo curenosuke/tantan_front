@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 import fetchCanvasData from '@/api/fetchCanvasData'
+import { fetchDocuments } from '@/api/documentApi'
+import { executeResearch } from '@/api/researchApi'
 
 interface LeanCanvas {
   problem: string
@@ -31,7 +33,8 @@ export default function ResearchConfirmPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [canvasData, setCanvasData] = useState<LeanCanvas | null>(null)
-  const [isFilesUploaded, setIsFilesUploaded] = useState(false)
+  const [documentsCount, setDocumentsCount] = useState(0)
+  const [isExecuting, setIsExecuting] = useState(false)
 
   // ダミーデータ（現在のリーンキャンバス）
   const dummyCanvasData: LeanCanvas = {
@@ -62,18 +65,30 @@ export default function ResearchConfirmPage() {
           const userData = await response.json()
           setUser(userData)
           
-          // 認証成功後、バックエンドからデータを取得
-          const fetchedData = await fetchCanvasData(projectId)
-          if (fetchedData) {
-            // バックエンドから取得したデータにversionプロパティを追加
-            const canvasDataWithVersion = {
-              ...fetchedData,
-              version: "latest" // バックエンドから取得した最新データ
+          // キャンバスデータを取得
+          try {
+            const fetchedData = await fetchCanvasData(projectId)
+            if (fetchedData) {
+              const canvasDataWithVersion = {
+                ...fetchedData,
+                version: "latest"
+              }
+              setCanvasData(canvasDataWithVersion)
+            } else {
+              setCanvasData(dummyCanvasData)
             }
-            setCanvasData(canvasDataWithVersion)
-          } else {
-            // データが取得できない場合はダミーデータを使用
+          } catch (error) {
+            console.error('キャンバスデータ取得エラー:', error)
             setCanvasData(dummyCanvasData)
+          }
+          
+          // ドキュメント数を取得
+          try {
+            const documents = await fetchDocuments(parseInt(projectId))
+            setDocumentsCount(documents.length)
+          } catch (error) {
+            console.error('ドキュメント数取得エラー:', error)
+            setDocumentsCount(0)
           }
         } else {
           window.location.href = '/login'
@@ -90,14 +105,39 @@ export default function ResearchConfirmPage() {
     checkAuth()
   }, [projectId])
 
-  const handleStartResearch = () => {
-    if (!isFilesUploaded) {
+  const handleStartResearch = async () => {
+    if (documentsCount === 0) {
       alert('リサーチ準備ページでファイルをアップロードしてからお試しください')
       return
     }
     
-    // リサーチ結果ページに遷移
-    router.push(`/canvas/${projectId}/research-exec/result`)
+    if (!user) {
+      alert('ユーザー情報の取得に失敗しました')
+      return
+    }
+
+    setIsExecuting(true)
+    
+    try {
+      const result = await executeResearch(parseInt(projectId))
+      
+      if (result.success) {
+        // リサーチ結果を持って結果画面に遷移
+        sessionStorage.setItem('researchResult', JSON.stringify({
+          research_result: result.research_result,
+          update_proposal: result.update_proposal,
+          canvas_data: canvasData
+        }))
+        router.push(`/canvas/${projectId}/research-exec/result`)
+      } else {
+        alert('リサーチの実行に失敗しました')
+      }
+    } catch (error) {
+      console.error('リサーチ実行エラー:', error)
+      alert(`リサーチの実行に失敗しました: ${error}`)
+    } finally {
+      setIsExecuting(false)
+    }
   }
 
   const handleGoBack = () => {
@@ -278,26 +318,30 @@ export default function ResearchConfirmPage() {
               </div>
             </div>
 
-            {/* チェックボックス */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isFilesUploaded}
-                  onChange={(e) => setIsFilesUploaded(e.target.checked)}
-                  className="w-5 h-5 text-[#FFBB3F] bg-gray-100 border-gray-300 rounded focus:ring-[#FFBB3F] focus:ring-2"
-                />
-                <span className="ml-3 text-gray-900 font-medium">
-                  「<a 
-                    href={`/canvas/${projectId}/research-prep`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#FFBB3F] hover:text-orange-500 underline"
-                  >
-                    リサーチ準備ページ
-                  </a>」で必要なファイルをアップロードしました
-                </span>
-              </label>
+            {/* ドキュメント状況表示 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div>
+                  <p className="text-blue-800 font-medium">
+                    アップロード済みドキュメント: <span className="font-bold">{documentsCount}件</span>
+                  </p>
+                  <p className="text-sm text-blue-600">
+                    ドキュメントを追加したい場合は
+                    <a
+                      href={`/canvas/${projectId}/research-prep`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-700 hover:text-blue-800 underline ml-1"
+                    >
+                      リサーチ準備ページ
+                    </a>
+                    でアップロードしてください
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* ボタン */}
@@ -310,10 +354,17 @@ export default function ResearchConfirmPage() {
               </button>
               <button
                 onClick={handleStartResearch}
-                disabled={!isFilesUploaded}
+                disabled={documentsCount === 0 || isExecuting}
                 className="px-8 py-3 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
               >
-                リサーチスタート
+                {isExecuting ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>実行中...</span>
+                  </div>
+                ) : (
+                  'リサーチスタート'
+                )}
               </button>
             </div>
           </div>
