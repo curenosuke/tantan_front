@@ -14,6 +14,92 @@ interface CanvasVersion {
   changes_summary: string
 }
 
+// ユーザー名取得用API
+const fetchUserName = async (userId: number): Promise<string> => {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`, {
+      credentials: 'include',
+    })
+    if (!res.ok) return '不明';
+    const data = await res.json();
+    return data.email || '不明';
+  } catch {
+    return '不明';
+  }
+};
+
+// バックエンドのupdate_categoryをフロント用ラベルに変換
+const getCategoryLabel = (cat: string) => {
+  switch (cat) {
+    case 'manual': return '直接編集';
+    case 'interview': return 'インタビュー反映';
+    case 'consistency_check': return '論理チェック';
+    case 'research': return 'リサーチ反映';
+    default: return 'その他';
+  }
+};
+
+// update_categoryを日本語ラベルに変換
+const getReasonLabel = (reason: string) => {
+  switch (reason) {
+    case 'manual':
+      return '直接編集';
+    case 'consistency_check':
+      return '論理チェック';
+    case 'research':
+      return 'リサーチ反映';
+    case 'interview':
+      return 'インタビュー反映';
+    case 'rollback':
+      return 'バージョンロールバック';
+    default:
+      return 'その他';
+  }
+};
+
+// update_categoryごとにアイコンを返す
+const getReasonIcon = (reason: string) => {
+  switch (reason) {
+    case 'manual':
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      );
+    case 'interview':
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      );
+    case 'consistency_check':
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+    case 'research':
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      );
+    case 'rollback':
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l-4-4 4-4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 20v-2a8 8 0 00-8-8H5" />
+        </svg>
+      );
+    default:
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+  }
+};
+
 export default function HistoryPage() {
   const params = useParams()
   const router = useRouter()
@@ -22,6 +108,7 @@ export default function HistoryPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [versions, setVersions] = useState<CanvasVersion[]>([])
+  const [v1User, setV1User] = useState<{ name: string; date: string } | null>(null);
 
   // ダミーデータ（バックエンド未接続時のデザイン確認用）
   const dummyVersions: CanvasVersion[] = [
@@ -52,93 +139,76 @@ export default function HistoryPage() {
   ]
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const fetchHistory = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
-          credentials: 'include',
-        })
-        
-        if (response.ok) {
-          const userData = await response.json()
-          setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setVersions(dummyVersions)
-        } else {
-          window.location.href = '/login'
+        // 認証チェック
+        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
+        if (!userRes.ok) {
+          window.location.href = '/login';
+          return;
+        }
+        const userData = await userRes.json();
+        setUser(userData);
+
+        // 履歴取得
+        const historyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/history-list`, { credentials: 'include' });
+        if (!historyRes.ok) {
+          setVersions([]);
+          setLoading(false);
+          return;
+        }
+        const historyList = await historyRes.json();
+        // ユーザー名を取得してマッピング
+        const userIdSet = Array.from(new Set(historyList.map((h: any) => h.user_id))) as number[];
+        const userMap: Record<number, string> = {};
+        await Promise.all(userIdSet.map(async (uid) => {
+          userMap[uid] = await fetchUserName(uid);
+        }));
+        // 整形
+        const formatted = historyList.map((h: any, idx: number) => ({
+          version: `version${h.version}`,
+          updated_at: h.last_updated,
+          updated_by: userMap[h.user_id] || '不明',
+          reason: h.update_category,
+          reason_description: getReasonLabel(h.update_category),
+          changes_summary: h.update_comment || '',
+          user_id: h.user_id,
+        })).reverse(); // 新しい順に
+        setVersions(formatted);
+        // version1用の作成者名も取得
+        if (historyList.length > 0) {
+          const v1 = historyList.find((h: any) => h.version === 1);
+          if (v1) {
+            setV1User({
+              name: userMap[v1.user_id] || '不明',
+              date: v1.last_updated,
+            });
+          }
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
-        setVersions(dummyVersions)
+        setVersions([]);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-
-    checkAuth()
-  }, [])
-
-  const getReasonIcon = (reason: string) => {
-    switch (reason) {
-      case 'direct_edit':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        )
-      case 'interview_reflection':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        )
-      case 'logic_check':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-      case 'research_reflection':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        )
-      default:
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-    }
-  }
+    };
+    fetchHistory();
+  }, [projectId]);
 
   const getReasonColor = (reason: string) => {
     switch (reason) {
-      case 'direct_edit':
-        return 'bg-blue-500'
-      case 'interview_reflection':
-        return 'bg-green-500'
-      case 'logic_check':
-        return 'bg-purple-500'
-      case 'research_reflection':
-        return 'bg-orange-500'
+      case 'manual':
+        return 'bg-blue-500'; // 直接編集: 青
+      case 'interview':
+        return 'bg-green-500'; // インタビュー反映: 緑
+      case 'consistency_check':
+        return 'bg-purple-500'; // 論理チェック: 紫
+      case 'research':
+        return 'bg-orange-500'; // リサーチ反映: オレンジ
+      case 'rollback':
+        return 'bg-yellow-400'; // バージョンロールバック: イエロー
       default:
-        return 'bg-gray-500'
-    }
-  }
-
-  const getReasonLabel = (reason: string) => {
-    switch (reason) {
-      case 'direct_edit':
-        return '直接編集'
-      case 'interview_reflection':
-        return 'インタビュー反映'
-      case 'logic_check':
-        return '論理チェック'
-      case 'research_reflection':
-        return 'リサーチ反映'
-      default:
-        return 'その他'
+        return 'bg-gray-500'; // その他: グレー
     }
   }
 
@@ -229,29 +299,19 @@ export default function HistoryPage() {
                           </span>
                         </div>
 
-                        {/* 更新理由 */}
+                        {/* カテゴリー見出し＋アイコン */}
                         <div className="flex items-center mb-3">
                           <div className={`${getReasonColor(version.reason)} text-white p-2 rounded-full mr-3`}>
                             {getReasonIcon(version.reason)}
                           </div>
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">
-                              {getReasonLabel(version.reason)}
-                            </span>
-                            <p className="text-sm text-gray-600">
-                              {version.reason_description}
-                            </p>
-                          </div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {getReasonLabel(version.reason)}
+                          </span>
                         </div>
-
-                        {/* 変更内容 */}
-                        <div className="bg-white rounded-lg p-3 border border-gray-200">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">変更内容</h4>
-                          <p className="text-sm text-gray-600 whitespace-pre-line">
-                            {version.changes_summary}
-                          </p>
-                        </div>
-
+                        {/* コメント（update_comment） */}
+                        <p className="text-sm text-gray-600 mb-2">
+                          {version.changes_summary}
+                        </p>
                         {/* このバージョンを参照ボタン */}
                         <div className="mt-3 flex justify-end">
                           <button
@@ -285,37 +345,28 @@ export default function HistoryPage() {
                           version1
                         </span>
                         <span className="text-sm text-gray-600">
-                          作成者: ふじさん
+                          作成者: {v1User ? v1User.name : '不明'}
                         </span>
                       </div>
                       <span className="text-sm text-gray-500">
-                        2024/01/13 09:00
+                        {v1User ? formatDate(v1User.date) : ''}
                       </span>
                     </div>
-
                     <div className="flex items-center mb-3">
                       <div className="bg-gray-500 text-white p-2 rounded-full mr-3">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                       </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
-                          プロジェクト作成
-                        </span>
-                        <p className="text-sm text-gray-600">
-                          リーンキャンバスの初期作成
-                        </p>
-                      </div>
+                      <span className="text-sm font-medium text-gray-900">
+                        プロジェクト作成
+                      </span>
                     </div>
-
-                    <div className="bg-white rounded-lg p-3 border border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">作成内容</h4>
-                      <p className="text-sm text-gray-600">
-                        プロジェクトの基本設定とリーンキャンバスの初期テンプレートを作成しました。
-                      </p>
+                    <div className="mb-3">
+                      <span className="text-sm text-gray-600">
+                        リーンキャンバスの初期作成
+                      </span>
                     </div>
-
                     {/* このバージョンを参照ボタン */}
                     <div className="mt-3 flex justify-end">
                       <button
@@ -337,7 +388,7 @@ export default function HistoryPage() {
             {/* 凡例 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">更新理由の凡例</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="flex items-center space-x-2">
                   <div className="bg-blue-500 text-white p-2 rounded-full">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,6 +420,15 @@ export default function HistoryPage() {
                     </svg>
                   </div>
                   <span className="text-sm text-gray-700">リサーチ反映</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="bg-yellow-400 text-white p-2 rounded-full">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l-4-4 4-4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 20v-2a8 8 0 00-8-8H5" />
+                    </svg>
+                  </div>
+                  <span className="text-sm text-gray-700">バージョンロールバック</span>
                 </div>
               </div>
             </div>
