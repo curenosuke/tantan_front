@@ -16,32 +16,16 @@ interface LeanCanvas {
 
 const fetchCanvasData = async (projectId: string): Promise<LeanCanvas | null> => {
   try {
-    const response = await fetch(`/projects/${projectId}/latest`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/latest`, {
       credentials: 'include',
     })
     
     if (response.ok) {
       const data = await response.json()
-      console.log('バックエンドから取得したデータ:', data)
-      console.log('データの型:', typeof data)
       
       // データがnullまたはundefinedの場合の安全なチェック
       if (!data) {
-        console.log('データがnullまたはundefinedです')
         return null
-      }
-      
-      if (typeof data === 'object') {
-        try {
-          const keys = Object.keys(data)
-          console.log('データのキー:', keys)
-          if (keys.length > 0) {
-            console.log('最初のキーの値:', Object.values(data)[0])
-          }
-        } catch (error) {
-          console.error('Object.keys()でエラーが発生しました:', error)
-          return null
-        }
       }
       
       // バックエンドのデータ構造に基づいてLean Canvasデータを構築
@@ -49,7 +33,6 @@ const fetchCanvasData = async (projectId: string): Promise<LeanCanvas | null> =>
         // edit_idをキーとして持つオブジェクトから最初のデータを取得
         const keys = Object.keys(data)
         if (keys.length === 0) {
-          console.log('データにキーが存在しません')
           return null
         }
         const editId = keys[0]
@@ -74,17 +57,14 @@ const fetchCanvasData = async (projectId: string): Promise<LeanCanvas | null> =>
             idea_name: canvasDetails.idea_name || ""
           }
           
-          console.log('構築されたLean Canvasデータ:', leanCanvasData)
           return leanCanvasData
         }
       }
       
       // データが期待される形式でない場合はnullを返す
-      console.log('バックエンドのデータ形式が期待と異なります。')
       return null
       
     } else {
-      console.log(`バックエンドからのレスポンスが正常ではありません。ステータス: ${response.status}`)
       return null
     }
   } catch (error) {

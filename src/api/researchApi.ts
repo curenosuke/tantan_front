@@ -4,6 +4,14 @@ interface ResearchResult {
   success: boolean
   research_result: string
   update_proposal: string
+  canvas_data?: any
+  structured_updates?: Array<{
+    field: string
+    field_japanese: string
+    before: string
+    after: string
+    reason: string
+  }>
 }
 
 interface SearchRequest {
