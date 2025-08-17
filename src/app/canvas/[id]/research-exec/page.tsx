@@ -4,14 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
-
-interface ResearchHistory {
-  research_id: number
-  execution_datetime: string
-  canvas_version: string
-  executed_by: string
-  created_at: string
-}
+import { fetchResearchHistory, type ResearchHistory } from '@/api/researchHistoryApi'
 
 export default function ResearchExecPage() {
   const params = useParams()
@@ -25,44 +18,6 @@ export default function ResearchExecPage() {
   const [sortBy, setSortBy] = useState<'execution_datetime' | 'canvas_version' | 'executed_by'>('execution_datetime')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  // ダミーデータ
-  const dummyResearchHistory: ResearchHistory[] = [
-    {
-      research_id: 1,
-      execution_datetime: "2024-01-15T14:30:15Z",
-      canvas_version: "version3",
-      executed_by: "のうち",
-      created_at: "2024-01-15T14:30:15Z"
-    },
-    {
-      research_id: 2,
-      execution_datetime: "2024-01-14T09:15:42Z",
-      canvas_version: "version2",
-      executed_by: "のな",
-      created_at: "2024-01-14T09:15:42Z"
-    },
-    {
-      research_id: 3,
-      execution_datetime: "2024-01-13T16:45:08Z",
-      canvas_version: "version2",
-      executed_by: "ふじさん",
-      created_at: "2024-01-13T16:45:08Z"
-    },
-    {
-      research_id: 4,
-      execution_datetime: "2024-01-12T11:20:33Z",
-      canvas_version: "version1",
-      executed_by: "かっさあ",
-      created_at: "2024-01-12T11:20:33Z"
-    },
-    {
-      research_id: 5,
-      execution_datetime: "2024-01-11T13:10:27Z",
-      canvas_version: "version1",
-      executed_by: "のうち",
-      created_at: "2024-01-11T13:10:27Z"
-    }
-  ]
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -74,21 +29,30 @@ export default function ResearchExecPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setResearchHistory(dummyResearchHistory)
+          
+          // 実際のリサーチ履歴を取得
+          try {
+            const history = await fetchResearchHistory(parseInt(projectId))
+            setResearchHistory(history)
+          } catch (error) {
+            console.error('リサーチ履歴取得エラー:', error)
+            // エラー時は空の配列を設定
+            setResearchHistory([])
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
-        setResearchHistory(dummyResearchHistory)
+        console.error('認証エラー:', err)
+        // エラー時は空の配列を設定
+        setResearchHistory([])
       } finally {
         setLoading(false)
       }
     }
 
     checkAuth()
-  }, [])
+  }, [projectId])
 
   const handleDelete = async (researchId: number) => {
     if (confirm('このリサーチ履歴を削除しますか？')) {
