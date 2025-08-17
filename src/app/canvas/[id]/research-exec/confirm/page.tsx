@@ -106,6 +106,12 @@ export default function ResearchConfirmPage() {
   }, [projectId])
 
   const handleStartResearch = async () => {
+    // 重複実行防止
+    if (isExecuting) {
+      console.log('リサーチ実行中のため、重複リクエストをブロック')
+      return
+    }
+    
     if (documentsCount === 0) {
       alert('リサーチ準備ページでファイルをアップロードしてからお試しください')
       return
@@ -116,18 +122,23 @@ export default function ResearchConfirmPage() {
       return
     }
 
+
     setIsExecuting(true)
     
     try {
       const result = await executeResearch(parseInt(projectId))
+      console.log('リサーチ結果:', result.success ? '成功' : '失敗')
       
       if (result.success) {
         // リサーチ結果を持って結果画面に遷移
-        sessionStorage.setItem('researchResult', JSON.stringify({
+        const dataToStore = {
           research_result: result.research_result,
           update_proposal: result.update_proposal,
-          canvas_data: canvasData
-        }))
+          canvas_data: result.canvas_data || canvasData, // バックエンドからのcanvas_dataを優先
+          structured_updates: result.structured_updates || [] // 構造化された更新提案を追加
+        }
+        
+        sessionStorage.setItem('researchResult', JSON.stringify(dataToStore))
         router.push(`/canvas/${projectId}/research-exec/result`)
       } else {
         alert('リサーチの実行に失敗しました')
@@ -356,6 +367,7 @@ export default function ResearchConfirmPage() {
                 onClick={handleStartResearch}
                 disabled={documentsCount === 0 || isExecuting}
                 className="px-8 py-3 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+                style={{ pointerEvents: isExecuting ? 'none' : 'auto' }}
               >
                 {isExecuting ? (
                   <div className="flex items-center space-x-2">

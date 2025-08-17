@@ -24,6 +24,7 @@ interface LeanCanvas {
 
 interface ResearchResult {
   field: keyof LeanCanvas
+  field_japanese: string
   before: string
   after: string
   reason: string
@@ -37,111 +38,30 @@ export default function ResearchResultPage() {
   const [user, setUser] = useState<{ user_id: number; email: string; created_at: string; last_login?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [originalCanvas, setOriginalCanvas] = useState<LeanCanvas | null>(null)
+  const [updatedCanvas, setUpdatedCanvas] = useState<LeanCanvas | null>(null)
   const [researchResult, setResearchResult] = useState<string>('')
   const [updateProposal, setUpdateProposal] = useState<string>('')
+  const [structuredUpdates, setStructuredUpdates] = useState<ResearchResult[]>([])
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
 
-  // ダミーデータ（バックエンド未接続時のデザイン確認用）
-  const dummyOriginalCanvas: LeanCanvas = {
-    problem: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題",
-    existing_alternatives: "• ベテラン農家の長年の経験と勘（人依存、再現性なし、若手・新規農家が活用困難）\n• 安価なアナログ・デジタル機器による手動記録・管理（データ断片化、記録・分析が煩雑、リアルタイム性が低い）",
-    solution: "• 土壌・気象・植物画像をリアルタイム測定する小型センシングデバイス\n• 作物生育・水管理・病害予測を可視化するスマートフォンアプリ\n• クラウドでの自動データ蓄積とAI農業アドバイス\n• 低コスト・低消費電力設計、太陽光発電対応",
-    key_metrics: "• センサー導入台数\n• SaaS継続率（月間解約率）\n• アプリ利用率（日次・週次アクティブユーザー）",
-    unique_value_proposition: "使いやすいスマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
-    high_level_concept: "使いやすいスマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
-    unfair_advantage: "• 独自の超小型・低消費電力センサー技術（例：MEMS、画像センサー）\n• プリンターヘッド技術を活用した農業散布機器との統合可能性\n• 国内製造による品質・信頼性、全国販売網構築可能性\n• スマートグラス・AR技術との将来統合（例：独自MOVARIOスマートグラス）",
-    channels: "• 地域農協（JA）との協業販売\n• 全国農業機械販売ルート",
-    customer_segments: "中小規模の農業従事者",
-    early_adopters: "日本国内の米・野菜農家",
-    cost_structure: "• センサー・ハードウェア開発・量産コスト\n• スマートフォンアプリ・クラウドプラットフォーム開発・運用\n• 顧客サポート・チャネル開発（営業・代理店）",
-    revenue_streams: "• センサーデバイス販売（初期導入コスト）\n• 月額または年額SaaSダッシュボード利用料",
-    idea_name: "精密農業向けスマート農業センシング&管理プラットフォーム"
+  // データ取得エラー時のフォールバック用空データ
+  const emptyCanvas: LeanCanvas = {
+    problem: "",
+    existing_alternatives: "",
+    solution: "",
+    key_metrics: "",
+    unique_value_proposition: "",
+    high_level_concept: "",
+    unfair_advantage: "",
+    channels: "",
+    customer_segments: "",
+    early_adopters: "",
+    cost_structure: "",
+    revenue_streams: "",
+    idea_name: ""
   }
-
-  const dummyUpdatedCanvas: LeanCanvas = {
-    problem: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題\n• 若手農家の技術習得時間の長期化",
-    existing_alternatives: "• ベテラン農家の長年の経験と勘（人依存、再現性なし、若手・新規農家が活用困難）\n• 安価なアナログ・デジタル機器による手動記録・管理（データ断片化、記録・分析が煩雑、リアルタイム性が低い）\n• 既存のスマート農業ソリューション（高価格、複雑な操作、導入ハードルが高い）",
-    solution: "• 土壌・気象・植物画像をリアルタイム測定する小型センシングデバイス\n• 作物生育・水管理・病害予測を可視化するスマートフォンアプリ\n• クラウドでの自動データ蓄積とAI農業アドバイス\n• 低コスト・低消費電力設計、太陽光発電対応\n• 段階的導入プランとリースオプション提供",
-    key_metrics: "• センサー導入台数\n• SaaS継続率（月間解約率）\n• アプリ利用率（日次・週次アクティブユーザー）\n• 農作物の収穫量向上率\n• 農作業時間短縮率\n• 農家の収益性向上率",
-    unique_value_proposition: "使いやすいスマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。技術的優位性により、競合他社の半額以下での提供を実現。",
-    high_level_concept: "使いやすいスマート農業ソリューション。センシングと精密機器技術を活用し、手頃な価格で高性能な環境センサーとスマートフォンアプリベースの農場管理ダッシュボードを統合ソリューションとして提供。",
-    unfair_advantage: "• 独自の超小型・低消費電力センサー技術（例：MEMS、画像センサー）\n• プリンターヘッド技術を活用した農業散布機器との統合可能性\n• 国内製造による品質・信頼性、全国販売網構築可能性\n• スマートグラス・AR技術との将来統合（例：独自MOVARIOスマートグラス）\n• 農業従事者との深い関係性と理解",
-    channels: "• 地域農協（JA）との協業販売\n• 全国農業機械販売ルート\n• 段階的導入プランとリースオプション",
-    customer_segments: "デジタル化に前向きな40-60代の中小規模農家（耕作面積5-20ha）",
-    early_adopters: "日本国内の米・野菜農家で、デジタル化に前向きな40-60代の中小規模農家",
-    cost_structure: "• センサー・ハードウェア開発・量産コスト\n• スマートフォンアプリ・クラウドプラットフォーム開発・運用\n• 顧客サポート・チャネル開発（営業・代理店）\n• 段階的導入支援コスト",
-    revenue_streams: "• センサーデバイス販売（初期導入コスト）\n• 月額または年額SaaSダッシュボード利用料\n• リースオプションによる継続収益",
-    idea_name: "精密農業向けスマート農業センシング&管理プラットフォーム"
-  }
-
-  const dummyResearchResults: ResearchResult[] = [
-    {
-      field: 'problem',
-      before: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題",
-      after: "• 高齢化と人手不足による収益性の低下\n• 高額で複雑なスマート農業機器の導入困難\n• 経験に依存した農業技術の継承問題\n• 若手農家の技術習得時間の長期化",
-      reason: "リサーチ結果から、若手農家の技術習得に関する課題が追加されました。これにより、ターゲット層の課題がより具体的になりました。"
-    },
-    {
-      field: 'customer_segments',
-      before: "中小規模の農業従事者",
-      after: "デジタル化に前向きな40-60代の中小規模農家（耕作面積5-20ha）",
-      reason: "より具体的なターゲット像を定義することで、マーケティング戦略が明確になります。"
-    },
-    {
-      field: 'key_metrics',
-      before: "• センサー導入台数\n• SaaS継続率（月間解約率）\n• アプリ利用率（日次・週次アクティブユーザー）",
-      after: "• センサー導入台数\n• SaaS継続率（月間解約率）\n• アプリ利用率（日次・週次アクティブユーザー）\n• 農作物の収穫量向上率\n• 農作業時間短縮率\n• 農家の収益性向上率",
-      reason: "成果指標を追加することで、ビジネスインパクトをより適切に測定できるようになります。"
-    }
-  ]
-
-  const dummyGptResults = `リサーチ実施結果
-
-【市場調査結果】
-1. スマート農業市場の成長性
-- 2023年の国内市場規模：約1,200億円
-- 年平均成長率：15.2%
-- 主要成長要因：人手不足、高齢化、食料安全保障
-
-2. 競合分析
-- 大手企業：ヤンマー、クボタ、井関農機
-- スタートアップ：アグリノート、ファームノート
-- 価格帯：50万円〜200万円（高価格帯が主流）
-
-3. 顧客ニーズ調査
-- 最も重要な課題：初期投資コスト（78%）
-- 次に重要な課題：操作の簡単さ（65%）
-- 期待する効果：収穫量向上（82%）、作業時間短縮（76%）
-
-【技術調査結果】
-1. センサー技術の現状
-- 土壌センサー：pH、水分、温度測定が可能
-- 気象センサー：温度、湿度、風速、降雨量測定
-- 画像センサー：作物の生育状況、病害検出
-
-2. 通信技術
-- LoRaWAN：低消費電力、長距離通信
-- 5G：高速通信、リアルタイム性
-- 衛星通信：広域カバー
-
-【規制・制度調査】
-1. 農業支援制度
-- スマート農業加速化実証事業
-- 農業競争力強化支援法
-- 農地法改正
-
-2. データ規制
-- 個人情報保護法
-- 農業データ連携基盤（WAGRI）
-- 農業データ標準化
-
-【推奨事項】
-1. 段階的導入プランの提供
-2. リースオプションの検討
-3. 地域農協との連携強化
-4. データセキュリティの強化
-5. ユーザビリティの向上`
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -154,31 +74,65 @@ export default function ResearchResultPage() {
           const userData = await response.json()
           setUser(userData)
           
-          // sessionStorageからリサーチ結果を取得
-          const storedResult = sessionStorage.getItem('researchResult')
-          if (storedResult) {
-            try {
-              const parsedResult = JSON.parse(storedResult)
-              setOriginalCanvas(parsedResult.canvas_data)
-              setResearchResult(parsedResult.research_result)
-              setUpdateProposal(parsedResult.update_proposal)
-              
-              // 結果取得後にsessionStorageをクリア
-              sessionStorage.removeItem('researchResult')
-            } catch (error) {
-              console.error('リサーチ結果の解析エラー:', error)
-              // エラー時はリサーチ実行画面に戻る
+          // sessionStorageからリサーチ結果を取得（既に読み込み済みの場合はスキップ）
+          if (!dataLoaded) {
+            const storedResult = sessionStorage.getItem('researchResult')
+            console.log('sessionStorage状況:', storedResult ? 'データあり' : 'データなし')
+            if (storedResult) {
+              try {
+                const parsedResult = JSON.parse(storedResult)
+                console.log('バックエンドから渡されたresearchResult:', parsedResult)
+                setOriginalCanvas(parsedResult.canvas_data || emptyCanvas)
+                setResearchResult(parsedResult.research_result || "リサーチ結果が見つかりませんでした。")
+                setUpdateProposal(parsedResult.update_proposal || "更新提案が見つかりませんでした。")
+                setStructuredUpdates(parsedResult.structured_updates || [])
+
+                // 修正: update_proposalがJSON文字列の場合はパースし、proposed_canvasを優先
+                let usedProposed = false;
+                if (parsedResult.update_proposal) {
+                  try {
+                    const proposalObj = JSON.parse(parsedResult.update_proposal);
+                    if (proposalObj.proposed_canvas) {
+                      setUpdatedCanvas(proposalObj.proposed_canvas);
+                      usedProposed = true;
+                    }
+                  } catch (e) {
+                    // パース失敗時は何もしない
+                  }
+                }
+                if (!usedProposed) {
+                  if (parsedResult.proposed_canvas) {
+                    setUpdatedCanvas(parsedResult.proposed_canvas);
+                  } else {
+                    const baseCanvas = parsedResult.canvas_data || emptyCanvas;
+                    const updatedCanvasWithChanges = applyStructuredUpdatesToCanvas(
+                      baseCanvas,
+                      parsedResult.structured_updates || []
+                    );
+                    setUpdatedCanvas(updatedCanvasWithChanges);
+                  }
+                }
+
+                setDataLoaded(true)
+                
+                // sessionStorageのクリアはページを離れる時に行う（useEffectの重複実行対策）
+                // sessionStorage.removeItem('researchResult')
+              } catch (error) {
+                console.error('リサーチ結果の解析エラー:', error)
+                // エラー時はリサーチ実行画面に戻る
+                router.push(`/canvas/${projectId}/research-exec`)
+              }
+            } else {
+              // データがない場合はリサーチ実行画面に戻る
               router.push(`/canvas/${projectId}/research-exec`)
             }
-          } else {
-            // データがない場合はリサーチ実行画面に戻る
-            router.push(`/canvas/${projectId}/research-exec`)
           }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
         console.error('初期化エラー:', err)
+        // エラー時はリサーチ実行画面に戻る
         router.push(`/canvas/${projectId}/research-exec`)
       } finally {
         setLoading(false)
@@ -187,6 +141,20 @@ export default function ResearchResultPage() {
 
     checkAuth()
   }, [projectId, router])
+
+  // 構造化された更新提案をキャンバスに適用する関数
+  const applyStructuredUpdatesToCanvas = (baseCanvas: LeanCanvas, updates: ResearchResult[]) => {
+    const newCanvas = { ...baseCanvas }
+    
+    // 各更新提案を適用
+    updates.forEach(update => {
+      if (update.field in newCanvas) {
+        (newCanvas as any)[update.field] = update.after
+      }
+    })
+    
+    return newCanvas
+  }
 
   const handleCanvasChange = (field: keyof LeanCanvas, value: string) => {
     if (updatedCanvas) {
@@ -224,13 +192,33 @@ export default function ResearchResultPage() {
     setIsUpdating(true)
     setShowConfirmModal(false)
     
-    // 本来はここでバックエンドAPIを呼び出す
-    // 現在はデザイン確認用のダミー処理
-    setTimeout(() => {
-      alert('リーンキャンバスが更新されました（デザイン確認用）')
+    try {
+      if (updatedCanvas && user) {
+        console.log('キャンバス更新開始:', projectId, updatedCanvas)
+        const result = await updateCanvasData(
+          parseInt(projectId), 
+          user.user_id, 
+          'リサーチ結果に基づく更新', 
+          updatedCanvas as unknown as Record<string, string>, 
+          'research'
+        )
+        console.log('キャンバス更新結果:', result)
+        if (result && result.success) {
+          alert('リーンキャンバスが更新されました')
+          router.push(`/canvas/${projectId}`)
+        } else {
+          console.error('キャンバス更新失敗:', result)
+          alert(`キャンバスの更新に失敗しました: ${(result && result.message) || '不明なエラー'}`)
+        }
+      } else {
+        alert('ユーザー情報またはキャンバスデータが不足しています')
+      }
+    } catch (error: any) {
+      console.error('キャンバス更新エラー:', error)
+      alert(`キャンバスの更新中にエラーが発生しました: ${error.message || error}`)
+    } finally {
       setIsUpdating(false)
-      router.push(`/canvas/${projectId}`)
-    }, 1000)
+    }
   }
 
   const handleCancel = () => {
@@ -279,7 +267,7 @@ export default function ResearchResultPage() {
               <p className="text-gray-600">リサーチ結果をリーンキャンバスに反映します</p>
             </div>
 
-            {/* GPTリサーチ結果セクション */}
+            {/* AIリサーチ結果セクション */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
                 <div className="bg-[#FFBB3F] text-white p-3 rounded-full mr-4">
@@ -294,66 +282,79 @@ export default function ResearchResultPage() {
               </div>
 
               <div className="bg-gray-50 rounded-lg p-6">
-                <pre className="text-sm text-gray-700 whitespace-pre-line font-sans">{gptResults}</pre>
+                <pre className="text-sm text-gray-700 whitespace-pre-line font-sans">{researchResult}</pre>
               </div>
             </div>
 
-            {/* 差分表示セクション */}
+            {/* 更新前のリーンキャンバス */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
-                <div className="bg-green-500 text-white p-3 rounded-full mr-4">
+                <div className="bg-gray-500 text-white p-3 rounded-full mr-4">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">リーンキャンバス更新内容</h2>
-                  <p className="text-gray-600">リサーチ結果に基づく変更点</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">更新前のリーンキャンバス</h2>
+                  <p className="text-gray-600">最新バージョンのリーンキャンバスです</p>
                 </div>
               </div>
-
-              {/* 差分表示 */}
-              <div className="space-y-6">
-                {researchResults.map((result, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center mb-3">
-                      <div className="bg-[#FFBB3F] text-white px-2 py-1 rounded text-xs font-bold mr-3">
-                        {result.field === 'problem' && '顧客課題'}
-                        {result.field === 'customer_segments' && '顧客セグメント'}
-                        {result.field === 'key_metrics' && '主要指標'}
-                        {result.field === 'solution' && '解決策'}
-                        {result.field === 'unique_value_proposition' && '独自の価値'}
-                        {result.field === 'unfair_advantage' && '圧倒的優位性'}
-                        {result.field === 'channels' && '販路'}
-                        {result.field === 'early_adopters' && 'アーリーアダプター'}
-                        {result.field === 'cost_structure' && '費用構造'}
-                        {result.field === 'revenue_streams' && '収益の流れ'}
-                        {result.field === 'idea_name' && 'アイデア名'}
-                      </div>
-                      <span className="text-sm text-gray-600">更新提案</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">変更前</h4>
-                        <div className="bg-gray-50 p-3 rounded text-sm text-gray-600 whitespace-pre-line">
-                          {result.before}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">変更後</h4>
-                        <div className="bg-green-50 p-3 rounded text-sm text-gray-800 whitespace-pre-line border border-green-200">
-                          {result.after}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-blue-50 p-3 rounded">
-                      <h4 className="text-sm font-medium text-blue-800 mb-1">更新理由</h4>
-                      <p className="text-sm text-blue-700">{result.reason}</p>
-                    </div>
-                  </div>
-                ))}
+              {/* アイデア名 */}
+              <div className="flex items-center mb-6">
+                <div className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-l-xl text-base font-bold shadow-md">アイデア名</div>
+                <div className="bg-gray-100 border border-gray-200 px-6 py-3 rounded-r-xl flex-1 shadow-sm">
+                  <span className="text-gray-700 font-medium">{originalCanvas.idea_name}</span>
+                </div>
+              </div>
+              {/* メインキャンバス表示（更新前） */}
+              <div className="grid grid-cols-10 gap-2 auto-rows-min">
+                {/* 1行目 */}
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">顧客課題</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.problem}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">解決策</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.solution}</div>
+                </div>
+                <div className="col-span-2 row-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">独自の価値</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[8rem]">{originalCanvas.unique_value_proposition}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">圧倒的優位性</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.unfair_advantage}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">顧客セグメント</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.customer_segments}</div>
+                </div>
+                {/* 2行目 */}
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">代替品</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.existing_alternatives}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">主要指標</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.key_metrics}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">販路</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.channels}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">アーリーアダプター</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.early_adopters}</div>
+                </div>
+                {/* 3行目 */}
+                <div className="col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">費用構造</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.cost_structure}</div>
+                </div>
+                <div className="col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">収益の流れ</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.revenue_streams}</div>
+                </div>
               </div>
             </div>
 
@@ -367,10 +368,9 @@ export default function ResearchResultPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900 mb-1">更新後のリーンキャンバス</h2>
-                  <p className="text-gray-600">以下の内容でキャンバスを更新します</p>
+                  <p className="text-gray-600">以下の内容でキャンバスを更新します（手動で編集可能）</p>
                 </div>
               </div>
-
               {/* アイデア名ヘッダー */}
               <div className="flex items-center mb-6">
                 <div className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-6 py-3 rounded-l-xl text-base font-bold shadow-md">
@@ -386,7 +386,6 @@ export default function ResearchResultPage() {
                   />
                 </div>
               </div>
-
               {/* メインキャンバス編集 */}
               <div className="grid grid-cols-10 gap-2 auto-rows-min">
                 {/* 1行目 */}

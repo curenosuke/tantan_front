@@ -6,7 +6,7 @@ export default function Home() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="mt-6 text-center">
           <h1 className="text-4xl font-extrabold bg-gradient-to-r from-[#FFBB3F] via-orange-500 to-[#FF8C00] bg-clip-text text-transparent">
-            ConceptCraft
+            InnoQuest
           </h1>
           <p className="text-sm text-gray-600 mt-1 font-medium">by tantan</p>
         </div>

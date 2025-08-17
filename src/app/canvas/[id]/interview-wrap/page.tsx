@@ -126,11 +126,23 @@ export default function InterviewWrapPage() {
     fetchInterviewNotes();
   }, [projectId]);
 
-  const handleDelete = async (memoId: number) => {
+  const handleDelete = async (noteId: number) => {
     if (confirm('このインタビューメモを削除してもよろしいですか？')) {
-      // 本来はここでバックエンドAPIを呼び出す
-      // 現在はデザイン確認用のダミー処理
-      setMemos(memos.filter(memo => memo.edit_id !== memoId))
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes/${noteId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          setMemos(memos.filter(memo => memo.note_id !== noteId));
+          alert('インタビューメモを削除しました');
+        } else {
+          const data = await response.json().catch(() => ({}));
+          alert('削除に失敗しました: ' + (data.message || response.statusText));
+        }
+      } catch (err) {
+        alert('削除中にエラーが発生しました');
+      }
     }
   }
 
@@ -338,7 +350,7 @@ export default function InterviewWrapPage() {
                             <button
                               onClick={e => {
                                 e.stopPropagation();
-                                handleDelete(memo.edit_id);
+                                handleDelete(memo.note_id);
                               }}
                               className="text-red-600 hover:text-red-900 transition-colors"
                             >

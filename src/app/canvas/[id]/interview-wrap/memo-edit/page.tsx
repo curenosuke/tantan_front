@@ -58,6 +58,21 @@ export default function InterviewMemoEditPage() {
   };
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (e) {
+        // 必要ならエラー処理
+      }
+    };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
     const fetchMemo = async () => {
       setLoading(true);
       try {
@@ -95,6 +110,7 @@ export default function InterviewMemoEditPage() {
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
           if (response.ok) {
             const userData = await response.json();
+            setUser(userData); // 追加
             setMemoData(prev => ({ ...prev, uploaded_by: userData.email || 'Unknown', interview_date: new Date().toISOString().slice(0, 10) }));
           } else {
             setMemoData(prev => ({ ...prev, interview_date: new Date().toISOString().slice(0, 10) }));
@@ -119,11 +135,37 @@ export default function InterviewMemoEditPage() {
   const handleSaveAndReflect = async () => {
     setSaving(true)
     try {
-      // 保存前にlocalStorageにインタビューメモを保存
+      if (!user) {
+        alert('ユーザー情報が取得できません。再ログインしてください。')
+        return
+      }
+      // 1. まずインタビューメモをDBに保存
+      const payload = {
+        edit_id: null, // 新規作成時はnull
+        project_id: Number(projectId),
+        user_id: user.user_id,
+        interviewee_name: memoData.interview_target,
+        interview_date: memoData.interview_date,
+        interview_type: memoData.interview_purpose,
+        interview_note: memoData.interview_record,
+      }
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        alert('インタビューメモの保存に失敗しました: ' + (data.message || response.statusText))
+        setSaving(false)
+        return
+      }
+      // 2. 現行の挙動（localStorage保存＋reflection画面遷移）
       localStorage.setItem('interviewMemo', JSON.stringify(memoData));
-      // バックエンド未接続時のデザイン確認用
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 保存処理の模擬
-      alert('インタビューメモを保存し、キャンバスに反映しました（デザイン確認用）')
+      alert('インタビューメモを保存し、キャンバスに反映しました')
       router.push(`/canvas/${projectId}/interview-wrap/reflection`)
     } catch (err) {
       console.error('保存エラー:', err)
@@ -136,10 +178,35 @@ export default function InterviewMemoEditPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // バックエンド未接続時のデザイン確認用
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 保存処理の模擬
-      alert('インタビューメモを保存しました（デザイン確認用）')
-      router.push(`/canvas/${projectId}/interview-wrap`)
+      if (!user) {
+        alert('ユーザー情報が取得できません。再ログインしてください。')
+        return
+      }
+      // APIリクエスト用データ整形
+      const payload = {
+        edit_id: null, // 新規作成時はnull
+        project_id: Number(projectId),
+        user_id: user.user_id,
+        interviewee_name: memoData.interview_target,
+        interview_date: memoData.interview_date,
+        interview_type: memoData.interview_purpose,
+        interview_note: memoData.interview_record,
+      }
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      if (response.ok) {
+        alert('インタビューメモを保存しました')
+        router.push(`/canvas/${projectId}/interview-wrap`)
+      } else {
+        const data = await response.json().catch(() => ({}))
+        alert('保存に失敗しました: ' + (data.message || response.statusText))
+      }
     } catch (err) {
       console.error('保存エラー:', err)
       alert('保存に失敗しました')

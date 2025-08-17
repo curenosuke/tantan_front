@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import { fetchResearchHistory } from '@/api/researchHistoryApi'
+
 
 interface ResearchHistory {
   research_id: number
@@ -46,6 +48,7 @@ export default function ResearchExecPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
+
           // 本番APIからリサーチ履歴取得
           try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research-list`, {
@@ -59,26 +62,41 @@ export default function ResearchExecPage() {
             }
           } catch {
             setResearchHistory(dummyResearchHistory)
+
           }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        setResearchHistory(dummyResearchHistory)
+
+        console.error('認証エラー:', err)
+        // エラー時は空の配列を設定
+        setResearchHistory([])
+
       } finally {
         setLoading(false)
       }
     }
     checkAuthAndFetch()
+
   }, [projectId])
 
   const handleDelete = async (researchId: number) => {
     if (confirm('このリサーチ履歴を削除しますか？')) {
       try {
-        setResearchHistory(researchHistory.filter(research => research.research_id !== researchId))
-        alert('リサーチ履歴を削除しました（デザイン確認用）')
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research/${researchId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          setResearchHistory(researchHistory.filter(research => research.research_id !== researchId));
+          alert('リサーチ履歴を削除しました');
+        } else {
+          const data = await response.json().catch(() => ({}));
+          alert('削除に失敗しました: ' + (data.message || response.statusText));
+        }
       } catch (err) {
-        console.error('リサーチ履歴削除エラー:', err)
+        alert('削除中にエラーが発生しました');
       }
     }
   }
