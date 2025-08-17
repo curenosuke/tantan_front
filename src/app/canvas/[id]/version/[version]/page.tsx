@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
+import fetchCanvasByVersion, { LeanCanvas } from '@/api/fetchCanvasByVersion'
+import updateCanvasData from '@/api/updateCanvasData'
 
 interface LeanCanvas {
   problem: string
@@ -51,44 +53,56 @@ export default function VersionPage() {
   }
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndFetch = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           credentials: 'include',
         })
-        
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          // バックエンド未接続時はダミーデータを使用
-          setCanvas(dummyCanvas)
+          // バックエンドからバージョンデータ取得
+          const verNum = version.replace('version', '')
+          const apiData = await fetchCanvasByVersion(projectId, verNum)
+          if (apiData) {
+            setCanvas(apiData)
+          } else {
+            setCanvas(dummyCanvas)
+          }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-        // エラー時もダミーデータを使用
         setCanvas(dummyCanvas)
       } finally {
         setLoading(false)
       }
     }
-
-    checkAuth()
-  }, [])
+    checkAuthAndFetch()
+  }, [projectId, version])
 
   const handleOverwrite = () => {
     setShowConfirmModal(true)
   }
 
-  const confirmOverwrite = () => {
-    // バックエンド実装時は、指定されたバージョンを最新バージョンとして上書き
-    console.log(`Overwriting with version: ${version}`)
-    console.log(`Reason: ${overwriteReason}`)
-    
-    // 実際の実装では、バックエンドAPIを呼び出して上書き処理を実行
-    // 成功後はhistoryページに戻る
-    router.push(`/canvas/${projectId}/history`)
-  }
+  const confirmOverwrite = async () => {
+    if (!user || !canvas) return;
+    setShowConfirmModal(false);
+    // rollbackとしてPOST
+    const field = { ...canvas };
+    // idea_nameなどstring以外が混じる場合はstring変換
+    Object.keys(field).forEach(key => {
+      if (typeof field[key] !== 'string') field[key] = String(field[key] ?? '');
+    });
+    await updateCanvasData(
+      Number(projectId),
+      user.user_id,
+      overwriteReason,
+      field,
+      'rollback'
+    );
+    router.push(`/canvas/${projectId}/history`);
+  };
 
   const handleGoBack = () => {
     router.push(`/canvas/${projectId}/history`)
