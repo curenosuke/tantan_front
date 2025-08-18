@@ -81,40 +81,42 @@ export default function ResearchResultPage() {
             if (storedResult) {
               try {
                 const parsedResult = JSON.parse(storedResult)
-                console.log('バックエンドから渡されたresearchResult:', parsedResult)
                 setOriginalCanvas(parsedResult.canvas_data || emptyCanvas)
+                // ここでoriginalCanvasの内容をログ
+                console.log('originalCanvas（現行キャンバス）:', parsedResult.canvas_data || emptyCanvas)
                 setResearchResult(parsedResult.research_result || "リサーチ結果が見つかりませんでした。")
                 setUpdateProposal(parsedResult.update_proposal || "更新提案が見つかりませんでした。")
                 setStructuredUpdates(parsedResult.structured_updates || [])
 
-                // 修正: update_proposalがJSON文字列の場合はパースし、proposed_canvasを優先
-                let usedProposed = false;
-                if (parsedResult.update_proposal) {
+                // --- AI提案のproposed_canvasを最優先でセット ---
+                let updated = null;
+                if (parsedResult.proposed_canvas) {
+                  updated = parsedResult.proposed_canvas;
+                  console.log('proposed_canvas（トップレベル）を使用:', updated)
+                } else if (parsedResult.update_proposal) {
                   try {
                     const proposalObj = JSON.parse(parsedResult.update_proposal);
                     if (proposalObj.proposed_canvas) {
-                      setUpdatedCanvas(proposalObj.proposed_canvas);
-                      usedProposed = true;
+                      updated = proposalObj.proposed_canvas;
+                      console.log('proposed_canvas（update_proposal内）を使用:', updated)
                     }
                   } catch (e) {
-                    // パース失敗時は何もしない
+                    console.log('update_proposalのパース失敗:', e)
                   }
                 }
-                if (!usedProposed) {
-                  if (parsedResult.proposed_canvas) {
-                    setUpdatedCanvas(parsedResult.proposed_canvas);
-                  } else {
-                    const baseCanvas = parsedResult.canvas_data || emptyCanvas;
-                    const updatedCanvasWithChanges = applyStructuredUpdatesToCanvas(
-                      baseCanvas,
-                      parsedResult.structured_updates || []
-                    );
-                    setUpdatedCanvas(updatedCanvasWithChanges);
-                  }
+                if (!updated) {
+                  // 構造化差分で生成
+                  const baseCanvas = parsedResult.canvas_data || emptyCanvas;
+                  updated = applyStructuredUpdatesToCanvas(
+                    baseCanvas,
+                    parsedResult.structured_updates || []
+                  );
+                  console.log('proposed_canvasが見つからないためstructuredUpdatesで生成:', updated)
                 }
-
+                setUpdatedCanvas(updated)
+                // ここでupdatedCanvasの内容をログ
+                console.log('updatedCanvas（AI提案キャンバス）:', updated)
                 setDataLoaded(true)
-                
                 // sessionStorageのクリアはページを離れる時に行う（useEffectの重複実行対策）
                 // sessionStorage.removeItem('researchResult')
               } catch (error) {
@@ -196,10 +198,10 @@ export default function ResearchResultPage() {
       if (updatedCanvas && user) {
         console.log('キャンバス更新開始:', projectId, updatedCanvas)
         const result = await updateCanvasData(
-          parseInt(projectId), 
-          user.user_id, 
-          'リサーチ結果に基づく更新', 
-          updatedCanvas as unknown as Record<string, string>, 
+          parseInt(projectId),
+          user.user_id,
+          'リサーチ結果に基づく更新',
+          updatedCanvas as unknown as Record<string, string>,
           'research'
         )
         console.log('キャンバス更新結果:', result)
@@ -250,6 +252,10 @@ export default function ResearchResultPage() {
     )
   }
 
+  // --- UI描画時にも両方の内容をログ ---
+  console.log('UI描画時 originalCanvas:', originalCanvas)
+  console.log('UI描画時 updatedCanvas:', updatedCanvas)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header user={user} />
@@ -286,7 +292,7 @@ export default function ResearchResultPage() {
               </div>
             </div>
 
-            {/* 更新前のリーンキャンバス */}
+            {/* 更新前のリーンキャンバス（静的表示） */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
                 <div className="bg-gray-500 text-white p-3 rounded-full mr-4">
@@ -357,8 +363,7 @@ export default function ResearchResultPage() {
                 </div>
               </div>
             </div>
-
-            {/* 更新後のリーンキャンバス編集 */}
+            {/* 更新後のリーンキャンバス（編集可能フォーム） */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
                 <div className="bg-blue-500 text-white p-3 rounded-full mr-4">
@@ -454,7 +459,6 @@ export default function ResearchResultPage() {
                     style={{ resize: 'none' }}
                   />
                 </div>
-
                 {/* 2行目 */}
                 <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
@@ -508,7 +512,6 @@ export default function ResearchResultPage() {
                     style={{ resize: 'none' }}
                   />
                 </div>
-
                 {/* 3行目 */}
                 <div className="col-span-5 bg-white border border-gray-200 rounded-xl p-3 shadow-md">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">

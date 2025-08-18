@@ -2,10 +2,11 @@
 
 interface ResearchHistory {
   research_id: number
-  execution_datetime: string
-  canvas_version: string
-  executed_by: string
-  created_at: string
+  researched_at: string
+  user_email: string
+  edit_id?: number
+  user_id?: number
+  result_text?: string
 }
 
 /**
@@ -14,7 +15,7 @@ interface ResearchHistory {
 export const fetchResearchHistory = async (projectId: number): Promise<ResearchHistory[]> => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research-history`,
+      `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research-list`,
       {
         method: 'GET',
         headers: {

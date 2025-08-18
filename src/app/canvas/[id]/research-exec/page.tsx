@@ -4,14 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
-import { fetchResearchHistory } from '@/api/researchHistoryApi'
+import { fetchResearchHistory, type ResearchHistory } from '@/api/researchHistoryApi'
 
-
-interface ResearchHistory {
-  research_id: number
-  researched_at: string
-  user_email: string
-}
 
 export default function ResearchExecPage() {
   const params = useParams()
@@ -25,20 +19,6 @@ export default function ResearchExecPage() {
   const [sortBy, setSortBy] = useState<'researched_at' | 'user_email'>('researched_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  // ダミーデータ（新型）
-  const dummyResearchHistory: ResearchHistory[] = [
-    {
-      research_id: 1,
-      researched_at: "2024-01-15T14:30:15Z",
-      user_email: "user1@example.com"
-    },
-    {
-      research_id: 2,
-      researched_at: "2024-01-14T09:15:42Z",
-      user_email: "user2@example.com"
-    }
-  ]
-
   useEffect(() => {
     const checkAuthAndFetch = async () => {
       try {
@@ -48,37 +28,27 @@ export default function ResearchExecPage() {
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-
-          // 本番APIからリサーチ履歴取得
+          // 実際のリサーチ履歴を取得
           try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research-list`, {
-              credentials: 'include',
-            })
-            if (res.ok) {
-              const data = await res.json()
-              setResearchHistory(data)
-            } else {
-              setResearchHistory(dummyResearchHistory)
-            }
-          } catch {
-            setResearchHistory(dummyResearchHistory)
-
+            const history = await fetchResearchHistory(parseInt(projectId))
+            setResearchHistory(history)
+          } catch (error) {
+            console.error('リサーチ履歴取得エラー:', error)
+            // エラー時は空の配列を設定
+            setResearchHistory([])
           }
         } else {
           window.location.href = '/login'
         }
       } catch (err) {
-
         console.error('認証エラー:', err)
         // エラー時は空の配列を設定
         setResearchHistory([])
-
       } finally {
         setLoading(false)
       }
     }
     checkAuthAndFetch()
-
   }, [projectId])
 
   const handleDelete = async (researchId: number) => {
