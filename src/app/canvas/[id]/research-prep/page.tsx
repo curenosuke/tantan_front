@@ -21,7 +21,7 @@ interface ResearchFile {
   document_id: number
   file_name: string
   source_type: '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'
-  user_id: number
+  user_email: string // ここを修正
   created_at: string
   file_size: number
 }
@@ -35,7 +35,7 @@ export default function ResearchPrepPage() {
   const [files, setFiles] = useState<ResearchFile[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'all' | '自社情報' | '市場情報' | '競合情報' | 'マクロトレンド'>('all')
-  const [sortBy, setSortBy] = useState<'file_name' | 'source_type' | 'user_id' | 'created_at'>('created_at')
+  const [sortBy, setSortBy] = useState<'file_name' | 'source_type' | 'user_email' | 'created_at'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
@@ -62,8 +62,8 @@ export default function ResearchPrepPage() {
               document_id: doc.document_id,
               file_name: doc.file_name,
               source_type: convertSourceTypeToFrontend(doc.source_type),
-              user_id: doc.user_id,
-              created_at: doc.created_at,
+              user_email: doc.user_email, // ここを修正
+              created_at: doc.uploaded_at,
               file_size: doc.file_size
             }))
             setFiles(formattedFiles)
@@ -119,7 +119,7 @@ export default function ResearchPrepPage() {
             document_id: result.document_id,
             file_name: result.file_info.original_filename,
             source_type: selectedFileType,
-            user_id: user?.user_id || 0,
+            user_email: user?.email || '',
             created_at: new Date().toISOString(),
             file_size: result.file_info.file_size
           })
@@ -177,8 +177,8 @@ export default function ResearchPrepPage() {
       return matchesSearch && matchesFilter
     })
     .sort((a, b) => {
-      let aValue: string | number = a[sortBy]
-      let bValue: string | number = b[sortBy]
+      let aValue: string | number = a[sortBy as keyof ResearchFile]
+      let bValue: string | number = b[sortBy as keyof ResearchFile]
       
       if (sortBy === 'created_at') {
         aValue = new Date(aValue as string).getTime()
@@ -275,13 +275,13 @@ export default function ResearchPrepPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'file_name' | 'source_type' | 'user_id' | 'created_at')}
+                      onChange={(e) => setSortBy(e.target.value as 'file_name' | 'source_type' | 'user_email' | 'created_at')}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors h-10"
                     >
                       <option value="created_at">アップロード日</option>
                       <option value="file_name">ファイル名</option>
                       <option value="source_type">情報の種類</option>
-                      <option value="user_id">追加者</option>
+                      <option value="user_email">追加者</option>
                     </select>
                   </div>
                   <div>
@@ -352,11 +352,14 @@ export default function ResearchPrepPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">ユーザーID: {file.user_id}</div>
+                            <div className="text-sm text-gray-900">{file.user_email}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">
-                              {new Date(file.created_at).toLocaleDateString('ja-JP')}
+                              {(() => {
+                                const date = new Date(file.created_at)
+                                return date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                              })()}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

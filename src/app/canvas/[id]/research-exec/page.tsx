@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import Sidebar from '@/components/Sidebar'
 import { fetchResearchHistory, type ResearchHistory } from '@/api/researchHistoryApi'
 
+
 export default function ResearchExecPage() {
   const params = useParams()
   const router = useRouter()
@@ -15,21 +16,18 @@ export default function ResearchExecPage() {
   const [loading, setLoading] = useState(true)
   const [researchHistory, setResearchHistory] = useState<ResearchHistory[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'execution_datetime' | 'canvas_version' | 'executed_by'>('execution_datetime')
+  const [sortBy, setSortBy] = useState<'researched_at' | 'user_email'>('researched_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndFetch = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
           credentials: 'include',
         })
-        
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
-          
           // 実際のリサーチ履歴を取得
           try {
             const history = await fetchResearchHistory(parseInt(projectId))
@@ -50,18 +48,25 @@ export default function ResearchExecPage() {
         setLoading(false)
       }
     }
-
-    checkAuth()
+    checkAuthAndFetch()
   }, [projectId])
 
   const handleDelete = async (researchId: number) => {
     if (confirm('このリサーチ履歴を削除しますか？')) {
       try {
-        // バックエンド未接続時のデザイン確認用
-        setResearchHistory(researchHistory.filter(research => research.research_id !== researchId))
-        alert('リサーチ履歴を削除しました（デザイン確認用）')
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research/${researchId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          setResearchHistory(researchHistory.filter(research => research.research_id !== researchId));
+          alert('リサーチ履歴を削除しました');
+        } else {
+          const data = await response.json().catch(() => ({}));
+          alert('削除に失敗しました: ' + (data.message || response.statusText));
+        }
       } catch (err) {
-        console.error('リサーチ履歴削除エラー:', err)
+        alert('削除中にエラーが発生しました');
       }
     }
   }
@@ -69,31 +74,6 @@ export default function ResearchExecPage() {
   const handleNewResearch = () => {
     router.push(`/canvas/${projectId}/research-exec/confirm`)
   }
-
-
-
-  // フィルタリングとソート
-  const filteredAndSortedHistory = researchHistory
-    .filter(research => {
-      const matchesSearch = research.canvas_version.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          research.executed_by.toLowerCase().includes(searchTerm.toLowerCase())
-      return matchesSearch
-    })
-    .sort((a, b) => {
-      let aValue: string | number = a[sortBy]
-      let bValue: string | number = b[sortBy]
-      
-      if (sortBy === 'execution_datetime') {
-        aValue = new Date(aValue as string).getTime()
-        bValue = new Date(bValue as string).getTime()
-      }
-      
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1
-      } else {
-        return aValue < bValue ? 1 : -1
-      }
-    })
 
   if (loading) {
     return (
@@ -109,11 +89,9 @@ export default function ResearchExecPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header user={user} />
-      
       <div className="flex min-h-screen">
         {/* サイドバー */}
         <Sidebar projectId={projectId} />
-        
         {/* メインコンテンツ */}
         <div className="flex-1 p-6">
           <div className="max-w-6xl mx-auto">
@@ -123,7 +101,6 @@ export default function ResearchExecPage() {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">リサーチ実施</h1>
                 <p className="text-gray-600">AIを使ってリーンキャンバスをアップデートします</p>
               </div>
-              
               {/* 新規リサーチボタン */}
               <button
                 onClick={handleNewResearch}
@@ -135,58 +112,6 @@ export default function ResearchExecPage() {
                 <span>新規リサーチ</span>
               </button>
             </div>
-
-
-
-            {/* 検索とフィルター */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* 検索 */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">検索</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="バージョンや実行者で検索..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors"
-                    />
-                    <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                </div>
-
-
-
-                {/* 並び替え */}
-                <div className="flex gap-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">並び替え</label>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as 'execution_datetime' | 'canvas_version' | 'executed_by')}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFBB3F] focus:border-[#FFBB3F] transition-colors h-10"
-                    >
-                      <option value="execution_datetime">実施時刻</option>
-                      <option value="canvas_version">バージョン</option>
-                      <option value="executed_by">実施者</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">順序</label>
-                    <button
-                      onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors h-10"
-                    >
-                      {sortOrder === 'asc' ? '昇順' : '降順'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* リサーチ履歴一覧 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
@@ -197,9 +122,6 @@ export default function ResearchExecPage() {
                         リサーチ実施時刻
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        もとにしたキャンバス
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         実施者
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -208,15 +130,19 @@ export default function ResearchExecPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredAndSortedHistory.length === 0 ? (
+                    {researchHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                          {searchTerm ? '検索結果が見つかりませんでした' : 'リサーチ履歴がまだありません'}
+                        <td colSpan={3} className="px-6 py-12 text-center text-gray-500">
+                          {'リサーチ履歴がまだありません'}
                         </td>
                       </tr>
                     ) : (
-                      filteredAndSortedHistory.map((research) => (
-                        <tr key={research.research_id} className="hover:bg-gray-50 transition-colors">
+                      researchHistory.map((research) => (
+                        <tr
+                          key={research.research_id}
+                          className="hover:bg-gray-50 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/canvas/${projectId}/research-exec/ref?rid=${research.research_id}`)}
+                        >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,25 +150,20 @@ export default function ResearchExecPage() {
                               </svg>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {new Date(research.execution_datetime).toLocaleDateString('ja-JP')}
+                                  {new Date(research.researched_at).toLocaleDateString('ja-JP')}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {new Date(research.execution_datetime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                  {new Date(research.researched_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#FFBB3F]/10 text-[#FFBB3F] border border-[#FFBB3F]/20">
-                              {research.canvas_version}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{research.executed_by}</div>
+                            <div className="text-sm text-gray-900">{research.user_email}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
-                              onClick={() => handleDelete(research.research_id)}
+                              onClick={e => { e.stopPropagation(); handleDelete(research.research_id) }}
                               className="text-red-500 hover:text-red-700 transition-colors"
                               title="削除"
                             >

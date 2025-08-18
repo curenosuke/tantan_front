@@ -82,21 +82,41 @@ export default function ResearchResultPage() {
               try {
                 const parsedResult = JSON.parse(storedResult)
                 setOriginalCanvas(parsedResult.canvas_data || emptyCanvas)
+                // ここでoriginalCanvasの内容をログ
+                console.log('originalCanvas（現行キャンバス）:', parsedResult.canvas_data || emptyCanvas)
                 setResearchResult(parsedResult.research_result || "リサーチ結果が見つかりませんでした。")
                 setUpdateProposal(parsedResult.update_proposal || "更新提案が見つかりませんでした。")
                 setStructuredUpdates(parsedResult.structured_updates || [])
-                
-                // 構造化された更新提案を適用した更新後キャンバスを作成
-                const baseCanvas = parsedResult.canvas_data || emptyCanvas
-                const updatedCanvasWithChanges = applyStructuredUpdatesToCanvas(
-                  baseCanvas, 
-                  parsedResult.structured_updates || []
-                )
-                setUpdatedCanvas(updatedCanvasWithChanges)
-                
-                // データ読み込み完了フラグを設定
+
+                // --- AI提案のproposed_canvasを最優先でセット ---
+                let updated = null;
+                if (parsedResult.proposed_canvas) {
+                  updated = parsedResult.proposed_canvas;
+                  console.log('proposed_canvas（トップレベル）を使用:', updated)
+                } else if (parsedResult.update_proposal) {
+                  try {
+                    const proposalObj = JSON.parse(parsedResult.update_proposal);
+                    if (proposalObj.proposed_canvas) {
+                      updated = proposalObj.proposed_canvas;
+                      console.log('proposed_canvas（update_proposal内）を使用:', updated)
+                    }
+                  } catch (e) {
+                    console.log('update_proposalのパース失敗:', e)
+                  }
+                }
+                if (!updated) {
+                  // 構造化差分で生成
+                  const baseCanvas = parsedResult.canvas_data || emptyCanvas;
+                  updated = applyStructuredUpdatesToCanvas(
+                    baseCanvas,
+                    parsedResult.structured_updates || []
+                  );
+                  console.log('proposed_canvasが見つからないためstructuredUpdatesで生成:', updated)
+                }
+                setUpdatedCanvas(updated)
+                // ここでupdatedCanvasの内容をログ
+                console.log('updatedCanvas（AI提案キャンバス）:', updated)
                 setDataLoaded(true)
-                
                 // sessionStorageのクリアはページを離れる時に行う（useEffectの重複実行対策）
                 // sessionStorage.removeItem('researchResult')
               } catch (error) {
@@ -178,24 +198,24 @@ export default function ResearchResultPage() {
       if (updatedCanvas && user) {
         console.log('キャンバス更新開始:', projectId, updatedCanvas)
         const result = await updateCanvasData(
-          parseInt(projectId), 
-          user.user_id, 
-          'リサーチ結果に基づく更新', 
-          updatedCanvas, 
+          parseInt(projectId),
+          user.user_id,
+          'リサーチ結果に基づく更新',
+          updatedCanvas as unknown as Record<string, string>,
           'research'
         )
         console.log('キャンバス更新結果:', result)
-        if (result.success) {
+        if (result && result.success) {
           alert('リーンキャンバスが更新されました')
           router.push(`/canvas/${projectId}`)
         } else {
           console.error('キャンバス更新失敗:', result)
-          alert(`キャンバスの更新に失敗しました: ${result.message || '不明なエラー'}`)
+          alert(`キャンバスの更新に失敗しました: ${(result && result.message) || '不明なエラー'}`)
         }
       } else {
         alert('ユーザー情報またはキャンバスデータが不足しています')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('キャンバス更新エラー:', error)
       alert(`キャンバスの更新中にエラーが発生しました: ${error.message || error}`)
     } finally {
@@ -232,6 +252,10 @@ export default function ResearchResultPage() {
     )
   }
 
+  // --- UI描画時にも両方の内容をログ ---
+  console.log('UI描画時 originalCanvas:', originalCanvas)
+  console.log('UI描画時 updatedCanvas:', updatedCanvas)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Header user={user} />
@@ -249,7 +273,7 @@ export default function ResearchResultPage() {
               <p className="text-gray-600">リサーチ結果をリーンキャンバスに反映します</p>
             </div>
 
-            {/* GPTリサーチ結果セクション */}
+            {/* AIリサーチ結果セクション */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
                 <div className="bg-[#FFBB3F] text-white p-3 rounded-full mr-4">
@@ -268,61 +292,78 @@ export default function ResearchResultPage() {
               </div>
             </div>
 
-            {/* 差分表示セクション */}
+            {/* 更新前のリーンキャンバス（静的表示） */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
-                <div className="bg-green-500 text-white p-3 rounded-full mr-4">
+                <div className="bg-gray-500 text-white p-3 rounded-full mr-4">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-1">リーンキャンバス更新内容</h2>
-                  <p className="text-gray-600">リサーチ結果に基づく変更点</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">更新前のリーンキャンバス</h2>
+                  <p className="text-gray-600">最新バージョンのリーンキャンバスです</p>
                 </div>
               </div>
-
-
-              {/* 構造化された差分表示 */}
-              {structuredUpdates.length > 0 && (
-                <div className="space-y-6 mt-6">
-                  {structuredUpdates.map((result, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center mb-3">
-                        <div className="bg-[#FFBB3F] text-white px-2 py-1 rounded text-xs font-bold mr-3">
-                          {result.field_japanese}
-                        </div>
-                        <span className="text-sm text-gray-600">更新提案</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">変更前</h4>
-                          <div className="bg-gray-50 p-3 rounded text-sm text-gray-600 whitespace-pre-line">
-                            {result.before}
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">変更後</h4>
-                          <div className="bg-green-50 p-3 rounded text-sm text-gray-800 whitespace-pre-line border border-green-200">
-                            {result.after}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-blue-50 p-3 rounded">
-                        <h4 className="text-sm font-medium text-blue-800 mb-1">更新理由</h4>
-                        <p className="text-sm text-blue-700">{result.reason}</p>
-                      </div>
-                    </div>
-                  ))}
+              {/* アイデア名 */}
+              <div className="flex items-center mb-6">
+                <div className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-l-xl text-base font-bold shadow-md">アイデア名</div>
+                <div className="bg-gray-100 border border-gray-200 px-6 py-3 rounded-r-xl flex-1 shadow-sm">
+                  <span className="text-gray-700 font-medium">{originalCanvas.idea_name}</span>
                 </div>
-              )}
-
-
+              </div>
+              {/* メインキャンバス表示（更新前） */}
+              <div className="grid grid-cols-10 gap-2 auto-rows-min">
+                {/* 1行目 */}
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">顧客課題</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.problem}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">解決策</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.solution}</div>
+                </div>
+                <div className="col-span-2 row-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">独自の価値</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[8rem]">{originalCanvas.unique_value_proposition}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">圧倒的優位性</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.unfair_advantage}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">顧客セグメント</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.customer_segments}</div>
+                </div>
+                {/* 2行目 */}
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">代替品</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.existing_alternatives}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">主要指標</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.key_metrics}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">販路</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.channels}</div>
+                </div>
+                <div className="col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">アーリーアダプター</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.early_adopters}</div>
+                </div>
+                {/* 3行目 */}
+                <div className="col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">費用構造</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.cost_structure}</div>
+                </div>
+                <div className="col-span-5 bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md">
+                  <div className="bg-gradient-to-r from-gray-400/30 to-gray-50 border border-gray-400/50 text-gray-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">収益の流れ</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line min-h-[6rem]">{originalCanvas.revenue_streams}</div>
+                </div>
+              </div>
             </div>
-
-            {/* 更新後のリーンキャンバス編集 */}
+            {/* 更新後のリーンキャンバス（編集可能フォーム） */}
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 mb-6">
               <div className="flex items-center mb-6">
                 <div className="bg-blue-500 text-white p-3 rounded-full mr-4">
@@ -335,7 +376,6 @@ export default function ResearchResultPage() {
                   <p className="text-gray-600">以下の内容でキャンバスを更新します（手動で編集可能）</p>
                 </div>
               </div>
-
               {/* アイデア名ヘッダー */}
               <div className="flex items-center mb-6">
                 <div className="bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-6 py-3 rounded-l-xl text-base font-bold shadow-md">
@@ -351,7 +391,6 @@ export default function ResearchResultPage() {
                   />
                 </div>
               </div>
-
               {/* メインキャンバス編集 */}
               <div className="grid grid-cols-10 gap-2 auto-rows-min">
                 {/* 1行目 */}
@@ -420,7 +459,6 @@ export default function ResearchResultPage() {
                     style={{ resize: 'none' }}
                   />
                 </div>
-
                 {/* 2行目 */}
                 <div className="col-span-2 bg-white border border-gray-200 rounded-xl p-3 shadow-md">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">
@@ -474,7 +512,6 @@ export default function ResearchResultPage() {
                     style={{ resize: 'none' }}
                   />
                 </div>
-
                 {/* 3行目 */}
                 <div className="col-span-5 bg-white border border-gray-200 rounded-xl p-3 shadow-md">
                   <div className="bg-gradient-to-r from-[#FFBB3F]/30 to-orange-50 border border-[#FFBB3F]/50 text-orange-700 w-full py-2 rounded-lg text-xs font-bold mb-3 text-center shadow-sm">

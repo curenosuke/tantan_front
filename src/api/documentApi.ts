@@ -18,14 +18,13 @@ interface DocumentUploadResult {
 
 interface Document {
   document_id: number
-  user_id: number
+  user_email: string;
   project_id: number
   file_name: string
   file_type: string
   file_size: number
   source_type: string
-  created_at: string
-  updated_at: string
+  uploaded_at: string
 }
 
 // 日本語ラベルをバックエンドのEnum値に変換する関数

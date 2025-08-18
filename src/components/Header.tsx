@@ -38,12 +38,15 @@ export default function Header({ user }: HeaderProps) {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <div className="relative group cursor-pointer" onClick={() => window.location.href = '/canvas-list'}>
-              <div className="relative z-10">
-                <h1 className="text-xl font-extrabold bg-gradient-to-r from-[#FFBB3F] via-orange-500 to-[#FF8C00] bg-clip-text text-transparent group-hover:from-[#FF8C00] group-hover:via-orange-500 group-hover:to-[#FFBB3F] transition-all duration-300">
-                  ConceptCraft
-                </h1>
+              <div className="relative z-10 flex items-center space-x-3">
+                <div className="flex flex-col">
+                  <h1 className="text-xl font-extrabold bg-gradient-to-r from-[#FFBB3F] via-orange-500 to-[#FF8C00] bg-clip-text text-transparent group-hover:from-[#FF8C00] group-hover:via-orange-500 group-hover:to-[#FFBB3F] transition-all duration-300">
+                    InnoQuest
+                  </h1>
+                  <p className="text-xs text-gray-600 font-medium mt-0.5">Powered by tantan</p>
+                </div>
+                <span className="text-xs text-gray-400 font-medium ml-2 whitespace-nowrap">さあ、あなたの作る未来を探しに行こう。</span>
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#FFBB3F] to-orange-500 group-hover:w-full transition-all duration-500"></div>
-                <p className="text-xs text-gray-600 font-medium">by tantan</p>
               </div>
             </div>
           </div>
