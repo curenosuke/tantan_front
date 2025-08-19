@@ -9,7 +9,7 @@ export async function fetchInterviewPreparation(
   sel: 'CPF' | 'PSF'
 ): Promise<InterviewPreparationResponse | null> {
   try {
-    const response = await fetch(`/projects/${projectId}/interview-preparation?sel=${sel}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-preparation?sel=${sel}`, {
       method: 'POST',
       credentials: 'include',
     });

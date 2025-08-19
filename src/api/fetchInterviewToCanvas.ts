@@ -10,7 +10,7 @@ export default async function fetchInterviewToCanvas(
   noteId: number
 ): Promise<InterviewToCanvasResponse> {
   try {
-    const res = await fetch(`/projects/${projectId}/interview-to-canvas`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-to-canvas`, {
       method: 'POST',
       credentials: 'include',
       headers: {
