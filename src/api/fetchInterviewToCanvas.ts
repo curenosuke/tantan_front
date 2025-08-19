@@ -20,7 +20,8 @@ export default async function fetchInterviewToCanvas(
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      return { success: false, message: err.message || 'APIエラー' }
+      // detailもmessageとして扱う
+      return { success: false, message: err.message || err.detail || 'APIエラー' }
     }
     return await res.json()
   } catch (e: any) {
