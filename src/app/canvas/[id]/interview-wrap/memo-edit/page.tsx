@@ -157,8 +157,8 @@ export default function InterviewMemoEditPage() {
         credentials: 'include',
         body: JSON.stringify(payload),
       })
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.note_id) {
         alert('インタビューメモの保存に失敗しました: ' + (data.message || response.statusText))
         setSaving(false)
         return
@@ -166,7 +166,7 @@ export default function InterviewMemoEditPage() {
       // 2. 現行の挙動（localStorage保存＋reflection画面遷移）
       localStorage.setItem('interviewMemo', JSON.stringify(memoData));
       alert('インタビューメモを保存し、キャンバスに反映しました')
-      router.push(`/canvas/${projectId}/interview-wrap/reflection`)
+      router.push(`/canvas/${projectId}/interview-wrap/reflection?note_id=${data.note_id}`)
     } catch (err) {
       console.error('保存エラー:', err)
       alert('保存に失敗しました')
