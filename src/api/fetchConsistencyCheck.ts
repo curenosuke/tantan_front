@@ -27,7 +27,7 @@ interface ConsistencyCheckResponse {
 
 const fetchConsistencyCheck = async (projectId: string): Promise<ConsistencyCheckResponse | null> => {
   try {
-    const response = await fetch(`/api/projects/${projectId}/consistency-check`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/consistency-check`, {
       method: 'POST',
       credentials: 'include',
       headers: {
