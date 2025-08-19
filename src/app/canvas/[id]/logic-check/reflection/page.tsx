@@ -207,7 +207,7 @@ export default function ReflectionPage() {
           
           // 現在のプロジェクトのリーンキャンバスを取得
           try {
-            const canvasResponse = await fetch(`/projects/${projectId}/latest`, {
+            const canvasResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/latest`, {
               credentials: 'include',
             })
             

@@ -18,7 +18,7 @@ export default async function fetchItem(canvasData: {
     
     // まず現在のユーザー情報を取得
     console.log('Fetching current user info...')
-    const userResponse = await fetch('/api/auth/me', {
+    const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
       method: 'GET',
       credentials: 'include',
     })
@@ -57,7 +57,7 @@ export default async function fetchItem(canvasData: {
 
     console.log('Sending request to /projects with data:', requestData)
 
-    const response = await fetch('/projects', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
