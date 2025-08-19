@@ -68,7 +68,7 @@ export default function CanvasListPage() {
     if (!confirm('このプロジェクトを削除しますか？')) return
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
