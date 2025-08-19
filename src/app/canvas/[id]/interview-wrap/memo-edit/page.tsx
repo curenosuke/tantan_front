@@ -140,7 +140,7 @@ export default function InterviewMemoEditPage() {
         return
       }
       // 1. まずインタビューメモをDBに保存
-      const payload = {
+      const payload: any = {
         edit_id: null, // 新規作成時はnull
         project_id: Number(projectId),
         user_id: user.user_id,
@@ -148,6 +148,9 @@ export default function InterviewMemoEditPage() {
         interview_date: memoData.interview_date,
         interview_type: memoData.interview_purpose,
         interview_note: memoData.interview_record,
+      }
+      if (memoId) {
+        payload.note_id = Number(memoId)
       }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
         method: 'POST',
@@ -183,7 +186,7 @@ export default function InterviewMemoEditPage() {
         return
       }
       // APIリクエスト用データ整形
-      const payload = {
+      const payload: any = {
         edit_id: null, // 新規作成時はnull
         project_id: Number(projectId),
         user_id: user.user_id,
@@ -191,6 +194,9 @@ export default function InterviewMemoEditPage() {
         interview_date: memoData.interview_date,
         interview_type: memoData.interview_purpose,
         interview_note: memoData.interview_record,
+      }
+      if (memoId) {
+        payload.note_id = Number(memoId)
       }
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
         method: 'POST',
