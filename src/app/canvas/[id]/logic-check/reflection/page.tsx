@@ -49,6 +49,7 @@ export default function ReflectionPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [hasAiProposal, setHasAiProposal] = useState(false)
+  const [showGoBackModal, setShowGoBackModal] = useState(false);
 
   // ダミーデータ（バックエンド未接続時のデザイン確認用）
   const dummyOriginalCanvas: LeanCanvas = {
@@ -360,7 +361,10 @@ export default function ReflectionPage() {
   }
 
   const handleCancel = () => {
-    setShowConfirmModal(false)
+    setShowGoBackModal(true);
+  }
+  const handleGoBack = () => {
+    router.push(`/canvas/${projectId}`);
   }
 
   if (loading) {
@@ -789,7 +793,7 @@ export default function ReflectionPage() {
             
             <div className="flex space-x-4">
               <button
-                onClick={handleCancel}
+                onClick={() => setShowConfirmModal(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
               >
                 キャンセル
@@ -799,6 +803,35 @@ export default function ReflectionPage() {
                 className="flex-1 bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
               >
                 更新する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showGoBackModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="bg-gray-400 text-white p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">本当に戻ってもよいですか？</h2>
+              <p className="text-gray-700">修正内容は失われます。</p>
+            </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setShowGoBackModal(false)}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleGoBack}
+                className="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
+              >
+                戻る
               </button>
             </div>
           </div>

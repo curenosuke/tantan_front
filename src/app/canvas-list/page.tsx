@@ -17,6 +17,9 @@ export default function CanvasListPage() {
   const [sortBy, setSortBy] = useState<'project_name' | 'created_at'>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   useEffect(() => {
     const initializePage = async () => {
@@ -64,27 +67,37 @@ export default function CanvasListPage() {
     initializePage()
   }, [])
   
-  const handleDelete = async (projectId: number) => {
-    if (!confirm('このプロジェクトを削除しますか？')) return
-    
+  const handleDeleteClick = (projectId: number) => {
+    setDeleteTargetId(projectId);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    setShowDeleteModal(false);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!deleteTargetId) return;
+    setShowDeleteConfirmModal(false);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${deleteTargetId}?user_id=${user.user_id}`, {
         method: 'DELETE',
         credentials: 'include',
-      })
-      
+      });
       if (response.ok) {
-        setProjects(projects.filter(project => project.project_id !== projectId))
-        console.log('Project deleted successfully')
+        setProjects(projects.filter(project => project.project_id !== deleteTargetId));
+        setDeleteTargetId(null);
+        console.log('Project deleted successfully');
       } else {
-        console.error('Failed to delete project:', response.status)
-        alert('プロジェクトの削除に失敗しました')
+        console.error('Failed to delete project:', response.status);
+        alert('プロジェクトの削除に失敗しました');
       }
     } catch (err) {
-      console.error('Error deleting project:', err)
-      alert('プロジェクトの削除に失敗しました')
+      console.error('Error deleting project:', err);
+      alert('プロジェクトの削除に失敗しました');
     }
-  }
+  };
 
   const handleCreate = () => {
     setShowCreateModal(true)
@@ -244,8 +257,8 @@ export default function CanvasListPage() {
                           <div className="flex justify-end space-x-2">
                             <button
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(project.project_id)
+                                e.stopPropagation();
+                                handleDeleteClick(project.project_id);
                               }}
                               className="text-red-500 hover:text-red-700 transition-colors"
                             >
@@ -299,6 +312,64 @@ export default function CanvasListPage() {
             >
               キャンセル
             </button>
+          </div>
+        </div>
+      )}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="bg-red-500 text-white p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">本当にこのプロジェクトを削除しますか？</h2>
+              <p className="text-gray-700">この操作は取り消せません。</p>
+            </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 bg-gradient-to-r from-red-500 to-red-700 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="bg-red-700 text-white p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">最終確認</h2>
+              <p className="text-gray-700">このプロジェクトと関連データは完全に削除されます。本当に削除してよいですか？</p>
+            </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-md shadow-sm"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="flex-1 bg-gradient-to-r from-red-700 to-red-900 text-white px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-110 hover:shadow-lg shadow-md"
+              >
+                本当に削除する
+              </button>
+            </div>
           </div>
         </div>
       )}

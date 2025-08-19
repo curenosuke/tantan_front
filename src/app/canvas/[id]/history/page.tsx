@@ -279,59 +279,58 @@ export default function HistoryPage() {
                 {/* バージョン履歴 */}
                 <div className="space-y-8">
                   {versions.map((version, index) => (
-                    <div key={version.version} className="relative">
-                      {/* タイムラインの丸いポイント */}
-                      <div className="absolute left-4 top-4 w-4 h-4 bg-[#FFBB3F] rounded-full border-4 border-white shadow-md"></div>
-
-                      {/* バージョン情報 */}
-                      <div className="ml-12 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-3">
-                            <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-[#FFBB3F]/10 text-[#FFBB3F] border border-[#FFBB3F]/20">
-                              {version.version}
-                            </span>
-                            <span className="text-sm text-gray-600">
-                              更新者: {version.updated_by}
+                    version.version === "version1" ? null : (
+                      <div key={version.version} className="relative">
+                        {/* タイムラインの丸いポイント */}
+                        <div className="absolute left-4 top-4 w-4 h-4 bg-[#FFBB3F] rounded-full border-4 border-white shadow-md"></div>
+                        {/* バージョン情報 */}
+                        <div className="ml-12 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-[#FFBB3F]/10 text-[#FFBB3F] border border-[#FFBB3F]/20">
+                                {version.version}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                更新者: {version.updated_by}
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              {formatDate(version.updated_at)}
                             </span>
                           </div>
-                          <span className="text-sm text-gray-500">
-                            {formatDate(version.updated_at)}
-                          </span>
-                        </div>
-
-                        {/* カテゴリー見出し＋アイコン */}
-                        <div className="flex items-center mb-3">
-                          <div className={`${getReasonColor(version.reason)} text-white p-2 rounded-full mr-3`}>
-                            {getReasonIcon(version.reason)}
+                          {/* カテゴリー見出し＋アイコン */}
+                          <div className="flex items-center mb-3">
+                            <div className={`${getReasonColor(version.reason)} text-white p-2 rounded-full mr-3`}>
+                              {getReasonIcon(version.reason)}
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">
+                              {getReasonLabel(version.reason)}
+                            </span>
                           </div>
-                          <span className="text-sm font-medium text-gray-900">
-                            {getReasonLabel(version.reason)}
-                          </span>
+                          {/* コメント（update_comment） */}
+                          <p className="text-sm text-gray-600 mb-2">
+                            {version.changes_summary}
+                          </p>
+                          {/* このバージョンを参照ボタン */}
+                          <div className="mt-3 flex justify-end">
+                            <button
+                              onClick={() => handleViewVersion(version.version)}
+                              className="inline-flex items-center bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md"
+                            >
+                              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              このバージョンを参照
+                            </button>
+                          </div>
                         </div>
-                        {/* コメント（update_comment） */}
-                        <p className="text-sm text-gray-600 mb-2">
-                          {version.changes_summary}
-                        </p>
-                        {/* このバージョンを参照ボタン */}
-                        <div className="mt-3 flex justify-end">
-                          <button
-                            onClick={() => handleViewVersion(version.version)}
-                            className="inline-flex items-center bg-gradient-to-r from-[#FFBB3F] to-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 hover:shadow-lg shadow-md"
-                          >
-                            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            このバージョンを参照
-                          </button>
-                        </div>
+                        {/* 最初のバージョン以外に矢印を表示 */}
+                        {index < versions.length - 1 && (
+                          <div className="absolute left-6 top-16 w-0.5 h-8 bg-gray-200"></div>
+                        )}
                       </div>
-
-                      {/* 最初のバージョン以外に矢印を表示 */}
-                      {index < versions.length - 1 && (
-                        <div className="absolute left-6 top-16 w-0.5 h-8 bg-gray-200"></div>
-                      )}
-                    </div>
+                    )
                   ))}
                 </div>
 
