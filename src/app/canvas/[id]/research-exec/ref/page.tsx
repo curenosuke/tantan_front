@@ -26,7 +26,7 @@ export default function ResearchRefPage() {
   useEffect(() => {
     const checkAuthAndFetch = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -34,7 +34,7 @@ export default function ResearchRefPage() {
           setUser(userData);
           // リサーチ一覧から該当IDを抽出
           if (researchId) {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research-list`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/research-list`, {
               credentials: 'include',
             });
             if (res.ok) {

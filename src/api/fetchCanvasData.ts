@@ -16,7 +16,7 @@ interface LeanCanvas {
 
 const fetchCanvasData = async (projectId: string): Promise<LeanCanvas | null> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/latest`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/latest`, {
       credentials: 'include',
     })
     

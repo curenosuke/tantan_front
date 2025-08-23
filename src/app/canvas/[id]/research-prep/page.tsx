@@ -47,7 +47,7 @@ export default function ResearchPrepPage() {
   useEffect(() => {
     const initializePage = async () => {
       try {
-        const authResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const authResponse = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, {
           credentials: 'include',
         })
         
