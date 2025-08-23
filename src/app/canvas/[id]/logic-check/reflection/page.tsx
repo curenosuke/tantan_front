@@ -136,7 +136,7 @@ export default function ReflectionPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, {
           credentials: 'include',
         })
         
@@ -208,7 +208,7 @@ export default function ReflectionPage() {
           
           // 現在のプロジェクトのリーンキャンバスを取得
           try {
-            const canvasResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/latest`, {
+            const canvasResponse = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/latest`, {
               credentials: 'include',
             })
             

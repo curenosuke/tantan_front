@@ -60,7 +60,7 @@ export default function InterviewMemoEditPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, { credentials: 'include' });
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
@@ -78,7 +78,7 @@ export default function InterviewMemoEditPage() {
       try {
         if (memoId) {
           // 編集モード: APIから取得
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/interview-notes`, {
             credentials: 'include',
           });
           if (response.ok) {
@@ -107,7 +107,7 @@ export default function InterviewMemoEditPage() {
           }
         } else {
           // 新規作成: ユーザー名のみセット、interview_dateは今日の日付
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, { credentials: 'include' });
           if (response.ok) {
             const userData = await response.json();
             setUser(userData); // 追加
@@ -152,7 +152,7 @@ export default function InterviewMemoEditPage() {
       if (memoId) {
         payload.note_id = Number(memoId)
       }
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/interview-notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ export default function InterviewMemoEditPage() {
       if (memoId) {
         payload.note_id = Number(memoId)
       }
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/interview-notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -62,7 +62,7 @@ export const uploadDocument = async (
   formData.append('source_type', convertSourceTypeToBackend(sourceType))
   
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/upload-and-process`,
+    `${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/projects/${projectId}/upload-and-process`,
     {
       method: 'POST',
       body: formData,
@@ -83,7 +83,7 @@ export const uploadDocument = async (
  */
 export const fetchDocuments = async (projectId: number): Promise<Document[]> => {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/documents`,
+    `${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/documents`,
     {
       method: 'GET',
       credentials: 'include',
@@ -103,7 +103,7 @@ export const fetchDocuments = async (projectId: number): Promise<Document[]> => 
  */
 export const deleteDocument = async (projectId: number, documentId: number): Promise<void> => {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/documents/${documentId}`,
+    `${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/projects/${projectId}/documents/${documentId}`,
     {
       method: 'DELETE',
       credentials: 'include',

@@ -17,7 +17,7 @@ export default async function fetchAutoAnswer(
   questions: Array<{ question: string; perspective: string }>
 ): Promise<AutoAnswerGenerationResponse | null> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/auto-answer`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/projects/${projectId}/auto-answer`, {
       method: 'POST',
       credentials: 'include',
       headers: {

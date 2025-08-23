@@ -17,7 +17,7 @@ interface CanvasVersion {
 // ユーザー名取得用API
 const fetchUserName = async (userId: number): Promise<string> => {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/users/${userId}`, {
       credentials: 'include',
     })
     if (!res.ok) return '不明';
@@ -143,7 +143,7 @@ export default function HistoryPage() {
       setLoading(true);
       try {
         // 認証チェック
-        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, { credentials: 'include' });
+        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, { credentials: 'include' });
         if (!userRes.ok) {
           window.location.href = '/login';
           return;
@@ -152,7 +152,7 @@ export default function HistoryPage() {
         setUser(userData);
 
         // 履歴取得
-        const historyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/history-list`, { credentials: 'include' });
+        const historyRes = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/history-list`, { credentials: 'include' });
         if (!historyRes.ok) {
           setVersions([]);
           setLoading(false);

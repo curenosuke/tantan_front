@@ -23,7 +23,7 @@ const fetchCanvasByVersion = async (
 ): Promise<LeanCanvas | null> => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/${version}`,
+      `${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/${version}`,
       {
         method: 'GET',
         credentials: 'include',

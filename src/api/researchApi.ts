@@ -41,7 +41,7 @@ export const executeResearch = async (
   projectId: number
 ): Promise<ResearchResult> => {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research`,
+    `${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/research`,
     {
       method: 'POST',
       headers: {
@@ -73,7 +73,7 @@ export const searchRelevantContent = async (
   }
   
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/search`,
+    `${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/projects/${projectId}/search`,
     {
       method: 'POST',
       headers: {

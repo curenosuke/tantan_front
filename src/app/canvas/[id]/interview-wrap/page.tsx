@@ -79,7 +79,7 @@ export default function InterviewWrapPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, {
           credentials: 'include',
         })
         
@@ -106,7 +106,7 @@ export default function InterviewWrapPage() {
     const fetchInterviewNotes = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/interview-notes`, {
           credentials: 'include',
         });
         if (response.ok) {
@@ -129,7 +129,7 @@ export default function InterviewWrapPage() {
   const handleDelete = async (noteId: number) => {
     if (confirm('このインタビューメモを削除してもよろしいですか？')) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes/${noteId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/interview-notes/${noteId}`, {
           method: 'DELETE',
           credentials: 'include',
         });

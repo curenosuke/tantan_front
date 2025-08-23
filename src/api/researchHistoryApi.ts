@@ -15,7 +15,7 @@ interface ResearchHistory {
 export const fetchResearchHistory = async (projectId: number): Promise<ResearchHistory[]> => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research-list`,
+      `${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/research-list`,
       {
         method: 'GET',
         headers: {

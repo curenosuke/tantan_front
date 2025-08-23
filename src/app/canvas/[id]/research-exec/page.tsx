@@ -22,7 +22,7 @@ export default function ResearchExecPage() {
   useEffect(() => {
     const checkAuthAndFetch = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, {
           credentials: 'include',
         })
         if (response.ok) {
@@ -54,7 +54,7 @@ export default function ResearchExecPage() {
   const handleDelete = async (researchId: number) => {
     if (confirm('このリサーチ履歴を削除しますか？')) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/research/${researchId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/research/${researchId}`, {
           method: 'DELETE',
           credentials: 'include',
         });

@@ -21,7 +21,7 @@ export default async function fetchCanvasAutogenerate(
   idea: string
 ): Promise<CanvasAutogenerateResponse | null> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/canvas-autogenerate`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/canvas-autogenerate`, {
       method: 'POST',
       credentials: 'include',
       headers: {

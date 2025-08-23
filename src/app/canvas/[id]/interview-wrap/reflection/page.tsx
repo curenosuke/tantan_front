@@ -64,7 +64,7 @@ export default function InterviewReflectPage() {
       // note_idが無い場合は最新のインタビューメモを取得してリダイレクト
       (async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/interview-notes`)
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/interview-notes`)
           const notes = await res.json()
           console.log('interview-notes response:', notes)
           if (notes && notes.length > 0 && (notes[0].note_id || notes[0].edit_id)) {
@@ -107,7 +107,7 @@ export default function InterviewReflectPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/auth/me`, {
           credentials: 'include',
         });
         if (response.ok) {

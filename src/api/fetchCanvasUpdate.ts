@@ -24,7 +24,7 @@ export default async function fetchCanvasUpdate(
   userAnswers: Array<{ question: string; answer: string; perspective: string }>
 ): Promise<CanvasUpdateResponse | null> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/canvas-update`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/projects/${projectId}/canvas-update`, {
       method: 'POST',
       credentials: 'include',
       headers: {

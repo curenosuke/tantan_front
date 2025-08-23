@@ -18,7 +18,7 @@ export default async function updateCanvasData(
   updateCategory: string = 'manual' // デフォルト値
 ): Promise<CanvasUpdateResponse | null> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${projectId}/latest`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT}/projects/${projectId}/latest`, {
       method: 'POST',
       credentials: 'include',
       headers: {
